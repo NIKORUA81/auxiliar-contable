@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auxiliar Contable — DIAN → SIIGO</title>
+<script src="js/vendor/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header>
+  <h1>Auxiliar Contable</h1>
+  <p>Convierte el reporte de documentos electrónicos de la DIAN en los archivos de importación oficiales de SIIGO. Todo se procesa en su navegador: los datos no salen de su equipo.</p>
+</header>
+
+<main>
+
+<!-- Paso 1: Configuración de la pyme -->
+<section class="card" id="seccion-config">
+  <h2>1 · Configuración de la pyme</h2>
+  <p class="hint">Esta información se guarda en el navegador y se reutiliza en cada importación.</p>
+
+  <div class="grid-2">
+    <label>NIT de la empresa <input id="cfg-nit" placeholder="900123456"></label>
+    <label>Razón social <input id="cfg-nombre" placeholder="Mi Pyme S.A.S."></label>
+  </div>
+
+  <h3>Compras y gastos (documentos recibidos → comprobantes contables)</h3>
+  <div class="grid-4">
+    <label>Tipo de comprobante <input id="cfg-cc-tipo"></label>
+    <label>Consecutivo inicial <input id="cfg-cc-consecutivo" type="number" min="1"></label>
+    <label>Sucursal <input id="cfg-cc-sucursal" placeholder="(opcional)"></label>
+    <label>Código impuesto IVA <input id="cfg-cc-codiva"></label>
+  </div>
+  <div class="grid-4">
+    <label>Cuenta gasto por defecto <input id="cfg-cc-gasto"></label>
+    <label>Cuenta IVA descontable <input id="cfg-cc-iva"></label>
+    <label>Cuenta INC <input id="cfg-cc-inc"></label>
+    <label>Cuenta por pagar <input id="cfg-cc-cxp"></label>
+  </div>
+  <div class="grid-4">
+    <label>Cuenta ReteFuente <input id="cfg-cc-retefuente"></label>
+    <label>Cuenta ReteICA <input id="cfg-cc-reteica"></label>
+    <label>Cuenta ReteIVA <input id="cfg-cc-reteiva"></label>
+    <label>Formato de fecha
+      <select id="cfg-fecha">
+        <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+        <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+        <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+      </select>
+    </label>
+  </div>
+
+  <h3>Ventas (documentos emitidos → facturas de venta)</h3>
+  <div class="grid-4">
+    <label>Tipo de comprobante <input id="cfg-fv-tipo"></label>
+    <label>Consecutivo inicial <input id="cfg-fv-consecutivo" type="number" min="1"></label>
+    <label>Sucursal <input id="cfg-fv-sucursal" placeholder="(opcional)"></label>
+    <label>Código impuesto IVA <input id="cfg-fv-codiva"></label>
+  </div>
+  <div class="grid-4">
+    <label>Código producto genérico <input id="cfg-fv-producto" placeholder="según catálogo SIIGO"></label>
+    <label>Código forma de pago <input id="cfg-fv-formapago" placeholder="según catálogo SIIGO"></label>
+    <label>Identificación vendedor <input id="cfg-fv-vendedor" placeholder="(opcional)"></label>
+    <span></span>
+  </div>
+
+  <h3>Reglas de cuenta contable por proveedor (NIT)</h3>
+  <p class="hint">Si el NIT del emisor coincide, el gasto se lleva a esta cuenta en lugar de la cuenta por defecto.</p>
+  <div class="grid-4">
+    <label>NIT proveedor <input id="regla-nit"></label>
+    <label>Cuenta contable <input id="regla-cuenta"></label>
+    <label>Nota <input id="regla-nota" placeholder="ej: Servicios públicos"></label>
+    <button id="btn-add-regla" class="secondary">Agregar regla</button>
+  </div>
+  <table class="tabla-reglas">
+    <thead><tr><th>NIT</th><th>Cuenta</th><th>Nota</th><th></th></tr></thead>
+    <tbody id="reglas-body"></tbody>
+  </table>
+
+  <div class="acciones">
+    <button id="btn-guardar-config">Guardar configuración</button>
+    <span id="cfg-status" class="status"></span>
+  </div>
+</section>
+
+<!-- Paso 2: Importar reporte DIAN -->
+<section class="card">
+  <h2>2 · Importar reporte DIAN</h2>
+  <p class="hint">Suba el archivo .xlsx del reporte de documentos electrónicos (Emitidos y Recibidos) descargado del portal de la DIAN.</p>
+  <div class="acciones">
+    <input id="archivo-dian" type="file" accept=".xlsx,.xls">
+    <button id="btn-importar">Analizar documentos</button>
+    <span id="import-status" class="status"></span>
+  </div>
+</section>
+
+<!-- Paso 3: Revisión -->
+<section class="card hidden" id="seccion-revision">
+  <h2>3 · Revisión y clasificación</h2>
+  <p class="hint">Verifique el destino sugerido de cada documento. Desmarque los que no desee incluir.</p>
+  <p id="contadores" class="contadores"></p>
+  <div class="tabla-scroll">
+    <table class="tabla-preview">
+      <thead>
+        <tr>
+          <th></th><th>Tipo de documento</th><th>Folio</th><th>Fecha</th>
+          <th>Tercero</th><th>Total</th><th>IVA</th><th>Destino</th><th>Observación</th>
+        </tr>
+      </thead>
+      <tbody id="preview-body"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Paso 4: Exportar -->
+<section class="card hidden" id="seccion-exportar">
+  <h2>4 · Exportar archivos para SIIGO</h2>
+  <p class="hint">Se generan los .xlsx con los encabezados oficiales de los modelos de SIIGO, listos para importar en la plataforma.</p>
+  <div class="acciones">
+    <button id="btn-exportar-comprobantes">Descargar comprobantes contables</button>
+    <button id="btn-exportar-facturas">Descargar facturas de venta</button>
+  </div>
+  <pre id="export-status" class="status-pre"></pre>
+</section>
+
+</main>
+
+<footer>
+  <p>Prototipo · Los archivos generados deben revisarse con el contador antes de importarlos en SIIGO.</p>
+</footer>
+
+<script src="js/siigo-headers.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
