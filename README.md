@@ -53,6 +53,19 @@ docs/modelos/         Modelos oficiales de SIIGO usados como referencia
 samples/              Reporte DIAN de ejemplo (datos ficticios)
 ```
 
+## Reglas de SIIGO Nube incorporadas (tutoriales oficiales)
+
+- **Máximo 500 registros por archivo de importación**: la exportación se divide
+  automáticamente en varios archivos sin partir comprobantes.
+- **Partida doble obligatoria** en comprobantes: la app la garantiza y la verifica.
+- **Cuentas por cobrar/pagar** llevan `No. cuota` y `Fecha vencimiento`.
+- **Forma de pago obligatoria** en facturas de venta (con vencimiento si es crédito):
+  se valida la configuración antes de exportar.
+- **Catálogos previos**: tipos de comprobante, terceros, productos, impuestos, formas de
+  pago, centros de costo, vendedores y bodegas deben existir en SIIGO; la app muestra la
+  lista de verificación en el paso 4.
+- **No se modifican títulos ni columnas** de los modelos oficiales.
+
 ## Limitaciones del prototipo (siguiente iteración)
 
 - Los códigos de impuesto/producto/forma de pago deben existir previamente en el catálogo

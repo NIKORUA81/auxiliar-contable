@@ -102,6 +102,18 @@ tr.excluido td { opacity: .45; }
 
 .tabla-reglas { margin-top: 10px; max-width: 720px; }
 
+.requisitos {
+  background: #f4f7fc;
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .85rem;
+  margin-bottom: 12px;
+}
+.requisitos summary { cursor: pointer; font-weight: 600; color: var(--azul); }
+.requisitos ul { margin: 8px 0 4px; padding-left: 20px; }
+.requisitos li { margin-bottom: 6px; }
+
 .hidden { display: none; }
 
 footer {

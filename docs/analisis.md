@@ -109,14 +109,36 @@ descuadre (por ejemplo, por documentos con impuestos no contemplados: ICA, IBUA,
 - **Reglas por NIT**: cuenta de gasto específica por proveedor (ej. servicios públicos → `5135xx`).
 - **Formato de fecha** de salida (según configuración regional de SIIGO).
 
-## 5. Videos de referencia
+## 5. Videos de referencia (tutoriales oficiales de SIIGO Nube)
 
-Los dos videos de YouTube compartidos (`p-8Hq_ZBtDI`, `yNkGLtOJX3g`) no pudieron consultarse
-desde el entorno de desarrollo (acceso a YouTube bloqueado por la política de red). El flujo
-implementado se basa en el proceso estándar de SIIGO Nube: *Descargar modelo → diligenciar →
-Importar datos → validar errores*. Si los videos muestran pasos o validaciones adicionales
-(por ejemplo, límites de filas por importación o catálogos previos obligatorios), deben
-incorporarse a este documento.
+Requisitos confirmados por los videos e incorporados a la aplicación:
+
+**Subir desde Excel — Comprobantes contables**
+(ruta: Configuración ⚙ → Contabilidad → Importación → Comprobantes contables, proceso de 5 pasos):
+- **Máximo 500 registros por archivo** → la app divide la exportación en varios archivos
+  (`_parte1de2`, …) sin partir un comprobante entre dos archivos.
+- Celdas rojas obligatorias: código del comprobante, consecutivo, fecha (día/mes/año),
+  cuenta contable (ya creada en SIIGO), identificación del tercero y valor débito o crédito.
+- Cuentas por cobrar/pagar exigen **vencimientos** → la fila de la cuenta por pagar lleva
+  `No. cuota` = 1 y `Fecha vencimiento`.
+- Cuentas de inventario exigen código de producto y bodega → fuera de alcance (el reporte
+  DIAN no trae detalle de ítems); usar cuentas de gasto/costo sin manejo de inventario.
+- **Partida doble obligatoria** (sumas iguales) → la app la garantiza por construcción y la
+  verifica antes de exportar.
+
+**Subir desde Excel — Facturas de venta**
+(ruta: Configuración ⚙ → Ventas → Importación → Facturas de venta):
+- **Requisitos previos**: tipo de comprobante de factura, terceros (clientes), centros de
+  costo, vendedores, bodegas, productos/servicios, impuestos y formas de pago deben existir
+  en SIIGO antes de importar → checklist visible en el paso 4 y validación de configuración
+  antes de exportar.
+- Límite de 500 registros por archivo; **no modificar títulos ni columnas** → encabezados
+  byte a byte y división automática en archivos.
+- **Forma de pago obligatoria**; si es crédito, la fecha de vencimiento es obligatoria →
+  la app exige el código de forma de pago y siempre diligencia `Fecha Vencimiento`.
+- Facturas con múltiples ítems van fila por fila → el reporte DIAN no trae detalle de
+  ítems, por eso se genera una fila por factura con producto genérico y valor base total.
+- SIIGO valida el archivo al subirlo y muestra el detalle de errores antes de finalizar.
 
 ## 6. Evolución sugerida (hoja de ruta)
 

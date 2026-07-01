@@ -117,7 +117,17 @@
 <!-- Paso 4: Exportar -->
 <section class="card hidden" id="seccion-exportar">
   <h2>4 · Exportar archivos para SIIGO</h2>
-  <p class="hint">Se generan los .xlsx con los encabezados oficiales de los modelos de SIIGO, listos para importar en la plataforma.</p>
+  <p class="hint">Se generan los .xlsx con los encabezados oficiales de los modelos de SIIGO, listos para importar en la plataforma. Si hay más de 500 registros se generan varios archivos (límite de SIIGO por importación).</p>
+
+  <details class="requisitos">
+    <summary>Requisitos previos en SIIGO Nube (verifique antes de importar)</summary>
+    <ul>
+      <li><strong>Comprobantes contables</strong> (Configuración ⚙ → Contabilidad → Importación → Comprobantes contables): el tipo de comprobante y las cuentas contables deben existir; los terceros deben estar creados; los comprobantes deben cumplir partida doble (esta app lo verifica).</li>
+      <li><strong>Facturas de venta</strong> (Configuración ⚙ → Ventas → Importación → Facturas de venta): deben existir previamente el tipo de comprobante de factura, los clientes (terceros), productos/servicios, impuestos, formas de pago y, si aplica, centros de costo, vendedores y bodegas.</li>
+      <li>No modifique los títulos ni agregue/elimine columnas de los archivos generados.</li>
+      <li>Tras subir el archivo, SIIGO valida los datos y muestra el detalle de los errores antes de finalizar; corrija y reintente si es necesario.</li>
+    </ul>
+  </details>
   <div class="acciones">
     <button id="btn-exportar-comprobantes">Descargar comprobantes contables</button>
     <button id="btn-exportar-facturas">Descargar facturas de venta</button>

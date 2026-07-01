@@ -250,7 +250,8 @@ function mapToComprobante(doc, consecutivo, cfg) {
   if (doc.reteICA > 0) fila(c.cuentaReteICA, "", doc.reteICA);
   if (doc.reteIVA > 0) fila(c.cuentaReteIVA, "", doc.reteIVA);
   if (neto !== 0) {
-    fila(c.cuentaPorPagar, "", neto, { "Fecha vencimiento": fecha });
+    // SIIGO exige cuota y vencimiento en cuentas por cobrar/pagar
+    fila(c.cuentaPorPagar, "", neto, { "No. cuota": 1, "Fecha vencimiento": fecha });
   }
   return filas;
 }
@@ -289,6 +290,9 @@ function mapToFacturaVenta(doc, consecutivo, cfg) {
 
 /* ============================== Exportador ============================== */
 
+// SIIGO Nube admite máximo 500 registros por archivo de importación
+const MAX_FILAS_SIIGO = 500;
+
 function exportXlsx(headers, rowsObjs, sheetName, fileName) {
   // aoa_to_sheet preserva los encabezados byte a byte (incluidos espacios finales)
   const aoa = [headers, ...rowsObjs.map(o => headers.map(h => o[h]))];
@@ -296,6 +300,34 @@ function exportXlsx(headers, rowsObjs, sheetName, fileName) {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
   XLSX.writeFile(wb, fileName);
+}
+
+/*
+ * Divide grupos de filas (un grupo = un comprobante completo) en archivos de
+ * máximo MAX_FILAS_SIIGO filas, sin partir un comprobante entre dos archivos.
+ */
+function chunkGroups(groups, max = MAX_FILAS_SIIGO) {
+  const chunks = [[]];
+  let count = 0;
+  for (const g of groups) {
+    if (count + g.length > max && chunks[chunks.length - 1].length) {
+      chunks.push([]);
+      count = 0;
+    }
+    chunks[chunks.length - 1].push(...g);
+    count += g.length;
+  }
+  return chunks.filter(c => c.length);
+}
+
+function exportChunks(groups, headers, sheetName, baseName) {
+  const chunks = chunkGroups(groups);
+  const fecha = new Date().toISOString().slice(0, 10);
+  chunks.forEach((rows, i) => {
+    const sufijo = chunks.length > 1 ? `_parte${i + 1}de${chunks.length}` : "";
+    exportXlsx(headers, rows, sheetName, `${baseName}_${fecha}${sufijo}.xlsx`);
+  });
+  return chunks.length;
 }
 
 /* ============================== Estado de la UI ============================== */
@@ -449,43 +481,64 @@ function updateContadores() {
 function exportarComprobantes() {
   const items = documentos.filter(x => x.incluir && x.destino === "comprobante");
   if (!items.length) { alert("No hay documentos marcados con destino Comprobante"); return; }
+  if (!config.compras.tipoComprobante) {
+    alert("Configure el tipo de comprobante de compras (debe existir en SIIGO) antes de exportar.");
+    return;
+  }
   let consecutivo = config.compras.consecutivo;
-  const filas = [];
+  const grupos = [];
   const descuadres = [];
+  let nFilas = 0;
   for (const item of items) {
     const fs = mapToComprobante(item.doc, consecutivo, config);
     const deb = round2(fs.reduce((s, f) => s + num(f["Débito"]), 0));
     const cre = round2(fs.reduce((s, f) => s + num(f["Crédito"]), 0));
     if (deb !== cre) descuadres.push(`Consecutivo ${consecutivo}: débitos ${deb} ≠ créditos ${cre}`);
-    filas.push(...fs);
+    grupos.push(fs);
+    nFilas += fs.length;
     consecutivo++;
   }
-  exportXlsx(SIIGO_COMPROBANTES_HEADERS, filas, "Datos",
-    `SIIGO_Comprobantes_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const nArchivos = exportChunks(grupos, SIIGO_COMPROBANTES_HEADERS, "Datos", "SIIGO_Comprobantes");
   config.compras.consecutivo = consecutivo;
   saveConfig(config);
   configToForm();
   setStatus("export-status",
-    `✔ ${items.length} comprobante(s), ${filas.length} fila(s) exportadas. Próximo consecutivo: ${consecutivo}.` +
-    (descuadres.length ? `\n⚠ Descuadres detectados:\n${descuadres.join("\n")}` : "\n✔ Todos los comprobantes cuadran (débitos = créditos)."));
+    `✔ ${items.length} comprobante(s), ${nFilas} fila(s) en ${nArchivos} archivo(s) (máx. ${MAX_FILAS_SIIGO} registros c/u). Próximo consecutivo: ${consecutivo}.` +
+    (descuadres.length ? `\n⚠ Descuadres detectados (SIIGO los rechazará):\n${descuadres.join("\n")}` : "\n✔ Todos los comprobantes cumplen partida doble (débitos = créditos)."));
+}
+
+// SIIGO exige que estos catálogos existan antes de importar facturas de venta
+function validarConfigVentas() {
+  const faltan = [];
+  if (!config.ventas.tipoComprobante) faltan.push("Tipo de comprobante de ventas");
+  if (!config.ventas.codigoProducto) faltan.push("Código de producto genérico (debe existir en el catálogo de SIIGO)");
+  if (!config.ventas.codigoFormaPago) faltan.push("Código de forma de pago (obligatorio; si es crédito, SIIGO exige fecha de vencimiento)");
+  return faltan;
 }
 
 function exportarFacturas() {
   const items = documentos.filter(x => x.incluir && x.destino === "factura");
   if (!items.length) { alert("No hay documentos marcados con destino Factura de venta"); return; }
+  const faltan = validarConfigVentas();
+  if (faltan.length) {
+    const seguir = confirm(
+      "Faltan datos de configuración que SIIGO exige para importar facturas:\n\n- " +
+      faltan.join("\n- ") +
+      "\n\n¿Exportar de todos modos? (SIIGO probablemente rechazará el archivo)");
+    if (!seguir) return;
+  }
   let consecutivo = config.ventas.consecutivo;
-  const filas = [];
+  const grupos = [];
   for (const item of items) {
-    filas.push(...mapToFacturaVenta(item.doc, consecutivo, config));
+    grupos.push(mapToFacturaVenta(item.doc, consecutivo, config));
     consecutivo++;
   }
-  exportXlsx(SIIGO_FACTURAS_HEADERS, filas, "Hoja1",
-    `SIIGO_FacturasVenta_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const nArchivos = exportChunks(grupos, SIIGO_FACTURAS_HEADERS, "Hoja1", "SIIGO_FacturasVenta");
   config.ventas.consecutivo = consecutivo;
   saveConfig(config);
   configToForm();
   setStatus("export-status",
-    `✔ ${items.length} factura(s) de venta exportadas. Próximo consecutivo: ${consecutivo}.`);
+    `✔ ${items.length} factura(s) de venta en ${nArchivos} archivo(s) (máx. ${MAX_FILAS_SIIGO} registros c/u). Próximo consecutivo: ${consecutivo}.`);
 }
 
 /* ---------- Varios ---------- */
