@@ -9,9 +9,22 @@ Aplicación web (prototipo) que convierte el **reporte de documentos electrónic
 Todo el procesamiento ocurre **en el navegador** (SheetJS): ningún dato contable sale del equipo
 del usuario, lo cual es importante porque el reporte DIAN contiene información tributaria sensible.
 
+## Cómo ejecutarla
+
+Tres opciones, de la más simple a la más permanente:
+
+1. **Enlace directo (sin instalar nada)**:
+   <https://raw.githack.com/NIKORUA81/auxiliar-contable/claude/dian-siigo-import-app-lquv5j/index.html>
+2. **Archivo único local**: descargue [`dist/AuxiliarContable.html`](dist/AuxiliarContable.html)
+   y ábralo con doble clic — funciona sin internet (toda la app va incluida en un solo archivo).
+3. **GitHub Pages (enlace permanente)**: en GitHub vaya a **Settings → Pages → Source →
+   "GitHub Actions"** (un solo clic, una sola vez). El workflow `pages.yml` ya está en el
+   repo; en el siguiente push (o ejecutándolo desde la pestaña Actions) la app quedará
+   publicada en <https://nikorua81.github.io/auxiliar-contable/>.
+
 ## Cómo usarla
 
-1. Abra `index.html` en el navegador (o publique el repositorio con GitHub Pages).
+1. Abra la aplicación con cualquiera de las opciones anteriores.
 2. **Paso 1 — Configuración de la pyme**: NIT, tipos de comprobante, consecutivos iniciales,
    plan de cuentas (gasto, IVA descontable, CxP, retenciones), códigos de impuesto de SIIGO y
    reglas de cuenta por NIT de proveedor. Se guarda en `localStorage` y se reutiliza.
