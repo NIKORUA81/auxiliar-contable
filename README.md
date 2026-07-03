@@ -98,10 +98,11 @@ Dos guías según qué quiera publicar:
 
 - **Solo el prototipo estático** (subdominio + SSL, sin base de datos):
   [`docs/DEPLOY.md`](docs/DEPLOY.md).
-- **La plataforma completa** (login, multiempresa, PostgreSQL, Docker Compose):
-  [`plataforma/README.md`](plataforma/README.md) — esta es la que reemplaza el
-  esquema preparatorio [`sql/schema.sql`](sql/schema.sql) (ya implementado y
-  gestionado con migraciones de Prisma en `plataforma/prisma/schema.prisma`).
+- **La plataforma completa** (login, multiempresa, PostgreSQL, Docker Compose, en un
+  segundo subdominio en paralelo): [`docs/DEPLOY_PLATAFORMA.md`](docs/DEPLOY_PLATAFORMA.md)
+  — esta es la que reemplaza el esquema preparatorio [`sql/schema.sql`](sql/schema.sql)
+  (ya implementado y gestionado con migraciones de Prisma en
+  `plataforma/prisma/schema.prisma`).
 
 ## Reglas de SIIGO Nube incorporadas (tutoriales oficiales)
 

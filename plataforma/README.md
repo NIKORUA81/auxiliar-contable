@@ -42,26 +42,25 @@ npm run dev:api                       # http://localhost:3001
 npm run dev:web                       # http://localhost:5173 (proxy /api → 3001)
 ```
 
-## Despliegue en el VPS (GitHub → Docker)
+## Despliegue en el VPS
 
-### 1. Subir a GitHub
+> Esta carpeta ya es parte del repositorio `auxiliar-contable` (rama
+> `claude/dian-siigo-import-app-lquv5j`), junto al prototipo estático de la raíz.
+> No hace falta un repositorio ni un `git init` aparte — solo clonar/actualizar
+> el repo y trabajar dentro de `plataforma/`. Guía completa y verificada paso a
+> paso (DNS, ubicación recomendada, chequeo de puertos, CloudPanel, PgAdmin):
+> [`docs/DEPLOY_PLATAFORMA.md`](../docs/DEPLOY_PLATAFORMA.md).
 
-```bash
-cd auxiliar-contable
-git init
-git add .
-git commit -m "Auxiliar Contable v1.0"
-git branch -M main
-git remote add origin git@github.com:NIKORUA81/auxiliar-contable.git
-git push -u origin main
-```
-
-### 2. En el VPS
+Resumen rápido (ver la guía completa para el detalle y las verificaciones):
 
 ```bash
-ssh nikorua81@SU_VPS
-git clone git@github.com:NIKORUA81/auxiliar-contable.git
-cd auxiliar-contable
+# Clonar en una ubicación DEDICADA, fuera del htdocs de cualquier sitio
+# (evita exponer el código fuente bajo una URL pública servida por nginx)
+git clone https://github.com/NIKORUA81/auxiliar-contable.git /opt/auxiliar-contable-plataforma
+cd /opt/auxiliar-contable-plataforma
+git checkout claude/dian-siigo-import-app-lquv5j
+cd plataforma
+
 cp .env.example .env
 nano .env        # POSTGRES_PASSWORD fuerte + JWT_SECRET (openssl rand -base64 48)
 
@@ -69,28 +68,28 @@ docker compose up -d --build
 ```
 
 El compose deja:
-- `web` en `127.0.0.1:8090` → apunte aquí su vhost de CloudPanel (reverse proxy)
-  o el ingress del Cloudflare Tunnel, con el dominio que elija (ej.
-  `auxiliar.nikorua.com`).
+- `web` en `127.0.0.1:8090` → apunte aquí un sitio "Reverse Proxy" de CloudPanel
+  con el subdominio que elija (ej. `plataforma.wolfiax.com`).
 - `db` en `127.0.0.1:5433` → accesible solo desde el propio VPS.
 
-Las migraciones de Prisma se aplican automáticamente al arrancar el contenedor
-`api` (`prisma migrate deploy`).
+Las migraciones de Prisma (`prisma/migrations/`, ya incluidas en el repo) se
+aplican automáticamente al arrancar el contenedor `api` (`prisma migrate deploy`).
 
-### 3. Crear el usuario administrador (opcional)
+### Crear el usuario administrador (opcional)
 
 ```bash
 docker compose exec api sh -c \
-  'ADMIN_EMAIL=admin@nikorua.com ADMIN_PASSWORD=UnaClaveFuerte node dist/seed.js'
+  'ADMIN_EMAIL=admin@wolfiax.com ADMIN_PASSWORD=UnaClaveFuerte node dist/seed.js'
 ```
 
 Los contadores se registran solos desde la pantalla de login.
 
-### 4. Actualizaciones
+### Actualizaciones
 
 ```bash
-cd auxiliar-contable
-git pull
+cd /opt/auxiliar-contable-plataforma
+git pull origin claude/dian-siigo-import-app-lquv5j
+cd plataforma
 docker compose up -d --build
 ```
 
