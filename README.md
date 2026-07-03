@@ -66,6 +66,12 @@ docs/modelos/         Modelos oficiales de SIIGO usados como referencia
 samples/              Reporte DIAN de ejemplo (datos ficticios)
 ```
 
+## Despliegue en VPS propio (subdominio + PostgreSQL)
+
+Guía paso a paso para publicar esto en un subdominio (CloudPanel/Hostinger) y dejar
+PostgreSQL preparado para el futuro backend: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+Esquema SQL preparatorio (aún no conectado a la app) en [`sql/schema.sql`](sql/schema.sql).
+
 ## Reglas de SIIGO Nube incorporadas (tutoriales oficiales)
 
 - **Máximo 500 registros por archivo de importación**: la exportación se divide
