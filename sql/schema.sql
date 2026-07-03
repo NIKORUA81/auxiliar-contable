@@ -1,11 +1,11 @@
--- Esquema preparatorio para el futuro backend multiempresa de Auxiliar Contable.
+-- SUPERADO: este esquema preparatorio quedó reemplazado por el backend real en
+-- plataforma/prisma/schema.prisma (mismas tablas, nombres en español/inglés
+-- ligeramente distintos, gestionado con migraciones de Prisma vía
+-- `npx prisma migrate deploy`, que se ejecuta automáticamente al levantar el
+-- contenedor `api` de plataforma/docker-compose.yml). Ya no hace falta correr
+-- este archivo a mano — se conserva solo como referencia histórica.
 --
--- NO está conectado a la app todavía: el prototipo actual guarda la configuración
--- en localStorage del navegador. Este esquema queda listo en la base de datos para
--- cuando se implemente la API (autenticación, varias pymes por contador, historial
--- de importaciones y consecutivos compartidos entre dispositivos).
---
--- Uso: psql -h localhost -U auxiliar_app -d auxiliar_contable -f sql/schema.sql
+-- Uso (legado): psql -h localhost -U auxiliar_app -d auxiliar_contable -f sql/schema.sql
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto"; -- para gen_random_uuid()
 

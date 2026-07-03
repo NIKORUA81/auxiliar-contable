@@ -148,7 +148,8 @@ Requisitos confirmados por los videos e incorporados a la aplicación:
    esperado, fechas dentro del periodo, duplicados por CUFE (re-importaciones).
 3. **Integración con el API de SIIGO Nube** para validar catálogos (impuestos, productos,
    formas de pago) e importar directamente sin pasar por Excel.
-4. **Backend multiempresa** (cuentas de usuario, varias pymes por contador, historial de
-   importaciones y de consecutivos) cuando el flujo esté validado con usuarios reales.
+4. ~~**Backend multiempresa**~~ → **implementado** en [`plataforma/`](../plataforma)
+   (cuentas de usuario, roles contador/empresa/admin, varias pymes por contador, historial
+   de importaciones y consecutivos en PostgreSQL vía Prisma).
 5. Soporte de impuestos adicionales del reporte (ICA, IBUA, ICUI, INC bolsas…) como filas
    contables configurables.

@@ -2,3 +2,9 @@
 .env.*
 *.log
 node_modules/
+
+# Plataforma (monorepo)
+plataforma/apps/*/dist/
+plataforma/packages/*/dist/
+plataforma/package-lock.json
+!**/.env.example

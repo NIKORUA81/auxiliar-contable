@@ -1,0 +1,1 @@
+{"root":["./src/main.tsx","./src/components/ThemeToggle.tsx","./src/lib/api.ts","./src/lib/theme.ts","./src/pages/ConfigEmpresa.tsx","./src/pages/Empresas.tsx","./src/pages/Importacion.tsx","./src/pages/Login.tsx"],"version":"5.9.3"}

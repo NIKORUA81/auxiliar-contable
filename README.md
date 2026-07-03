@@ -9,7 +9,33 @@ Aplicación web (prototipo) que convierte el **reporte de documentos electrónic
 Todo el procesamiento ocurre **en el navegador** (SheetJS): ningún dato contable sale del equipo
 del usuario, lo cual es importante porque el reporte DIAN contiene información tributaria sensible.
 
-## Cómo ejecutarla
+## Estructura del repositorio
+
+```
+auxiliar-contable/
+├── index.html, js/, css/       Prototipo estático original (100% en el navegador)
+├── dist/AuxiliarContable.html   Versión de archivo único, sin internet
+└── plataforma/                  ★ Aplicación completa (multi-empresa, con base de datos)
+    ├── apps/api/                Backend Express + TypeScript + Prisma (PostgreSQL)
+    ├── apps/web/                Frontend React + Vite (tema claro/oscuro, responsive)
+    ├── packages/motor-dian-siigo/  Motor compartido de parseo y contabilización
+    ├── prisma/                  Esquema de base de datos
+    ├── docker-compose.yml       db + api + web para el VPS
+    └── preview/                 Vista previa estática de las 4 pantallas (sin backend)
+```
+
+- **Prototipo estático** (raíz): sigue funcionando igual, ideal para uso individual sin cuenta.
+- **Plataforma** (`plataforma/`): versión completa con login, roles (contador/empresa/admin),
+  configuración por empresa persistida en PostgreSQL e historial de importaciones.
+  Guía de despliegue en [`plataforma/README.md`](plataforma/README.md).
+- **Vista previa** (`plataforma/preview/`): abre `index.html` para ver la forma de las
+  4 pantallas con datos simulados, sin instalar nada.
+
+El motor de negocio (`packages/motor-dian-siigo`) es un puerto a TypeScript del mismo
+`js/app.js` del prototipo estático: mismos encabezados, misma partida doble, mismo
+límite de 500 filas por archivo — validado primero en el prototipo y luego portado.
+
+## Cómo ejecutar el prototipo estático
 
 Tres opciones, de la más simple a la más permanente:
 
@@ -66,11 +92,16 @@ docs/modelos/         Modelos oficiales de SIIGO usados como referencia
 samples/              Reporte DIAN de ejemplo (datos ficticios)
 ```
 
-## Despliegue en VPS propio (subdominio + PostgreSQL)
+## Despliegue en VPS propio
 
-Guía paso a paso para publicar esto en un subdominio (CloudPanel/Hostinger) y dejar
-PostgreSQL preparado para el futuro backend: [`docs/DEPLOY.md`](docs/DEPLOY.md).
-Esquema SQL preparatorio (aún no conectado a la app) en [`sql/schema.sql`](sql/schema.sql).
+Dos guías según qué quiera publicar:
+
+- **Solo el prototipo estático** (subdominio + SSL, sin base de datos):
+  [`docs/DEPLOY.md`](docs/DEPLOY.md).
+- **La plataforma completa** (login, multiempresa, PostgreSQL, Docker Compose):
+  [`plataforma/README.md`](plataforma/README.md) — esta es la que reemplaza el
+  esquema preparatorio [`sql/schema.sql`](sql/schema.sql) (ya implementado y
+  gestionado con migraciones de Prisma en `plataforma/prisma/schema.prisma`).
 
 ## Reglas de SIIGO Nube incorporadas (tutoriales oficiales)
 
@@ -94,7 +125,8 @@ Esquema SQL preparatorio (aún no conectado a la app) en [`sql/schema.sql`](sql/
 - La **nómina electrónica** se excluye siempre (se importa por el módulo de nómina).
 - Los terceros deben existir en SIIGO; una siguiente versión podría generar también el
   modelo de importación de terceros a partir de los NIT/nombres del reporte.
-- Falta backend multiusuario (cuentas, varias empresas, historial de importaciones); el
-  prototipo usa `localStorage` a propósito para validar el flujo sin infraestructura.
+- ~~Falta backend multiusuario~~ → implementado en [`plataforma/`](plataforma/README.md)
+  (cuentas, varias empresas por contador, historial de importaciones en PostgreSQL). El
+  prototipo estático de la raíz se mantiene aparte para uso individual sin cuenta.
 
 > **Nota**: los archivos generados deben revisarse con el contador antes de importarlos a SIIGO.

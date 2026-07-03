@@ -1,0 +1,16 @@
+{
+  "name": "@auxiliar/motor-dian-siigo",
+  "version": "1.0.0",
+  "description": "Motor de parseo del reporte DIAN y generación de modelos de importación SIIGO",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

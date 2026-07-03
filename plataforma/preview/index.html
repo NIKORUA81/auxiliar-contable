@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auxiliar Contable — Vista previa responsive</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #eff1ea;
+  --paper-deep: #e4e7dd;
+  --card: #fbfbf8;
+  --ink: #16213b;
+  --ink-soft: #4a5468;
+  --line: #d8dbce;
+  --gold: #a8792c;
+  --gold-soft: #efe2c6;
+  --green: #33684a;
+  --green-soft: #dce8dd;
+  --amber: #b0701a;
+  --amber-soft: #f3e3c6;
+  --red: #a23b2e;
+  --red-soft: #f1dbd4;
+
+  /* Escala fluida: crece con el viewport sin saltos */
+  --space: clamp(0.75rem, 2vw, 1.5rem);
+  --radius: 12px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", sans-serif;
+  font-size: clamp(14px, 1.5vw, 15px);
+  line-height: 1.5;
+}
+h1, h2, h3 { font-family: "Fraunces", serif; font-weight: 600; margin: 0 0 .5rem; }
+.mono { font-family: "IBM Plex Mono", monospace; }
+.muted { color: var(--ink-soft); }
+.small { font-size: 13px; }
+
+/* =========================================================
+   SELECTOR DE PANTALLAS (solo vista previa)
+   En móvil se vuelve carrusel horizontal deslizable
+   ========================================================= */
+.preview-nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; gap: .5rem; align-items: center;
+  padding: .6rem clamp(.75rem, 3vw, 1.5rem);
+  background: var(--ink); color: var(--paper);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.preview-nav::-webkit-scrollbar { display: none; }
+.preview-nav span {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  opacity: .7; white-space: nowrap; flex-shrink: 0;
+}
+.preview-nav button {
+  background: transparent; color: var(--paper);
+  border: 1px solid rgba(255,255,255,.3); border-radius: 999px;
+  padding: .3rem .9rem; font: inherit; font-size: 13px; cursor: pointer;
+  white-space: nowrap; flex-shrink: 0;
+}
+.preview-nav button.active { background: var(--gold); border-color: var(--gold); color: #fff; }
+
+.screen { display: none; }
+.screen.visible { display: block; }
+
+/* =========================================================
+   LAYOUT GENERAL
+   Contenedor fluido: usa todo el ancho útil hasta 1280px
+   ========================================================= */
+.topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: .75rem; flex-wrap: wrap;
+  padding: clamp(.65rem, 2vw, 1rem) clamp(1rem, 3vw, 2rem);
+  background: var(--card); border-bottom: 1px solid var(--line);
+}
+.topbar h1 { font-size: clamp(1.05rem, 2.5vw, 1.25rem); margin: 0; }
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: var(--space) clamp(.75rem, 3vw, 1.5rem) calc(var(--space) * 2);
+}
+
+/* =========================================================
+   CARDS Y GRIDS ADAPTATIVOS
+   ========================================================= */
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: clamp(.9rem, 2.5vw, 1.5rem);
+  margin-bottom: var(--space);
+}
+
+/* Grid de tarjetas de empresa: 1 col móvil, 2 cols ≥ 900px */
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .cards-grid { grid-template-columns: 1fr 1fr; }
+}
+.cards-grid .card { margin-bottom: 0; }
+
+/* Configuración: compras y ventas lado a lado en escritorio */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space);
+  align-items: start;
+}
+@media (min-width: 1024px) {
+  .config-grid { grid-template-columns: 1fr 1fr; }
+}
+.config-grid .card { margin-bottom: 0; }
+
+/* Campos de formulario: densidad según ancho disponible */
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: .75rem .9rem;
+}
+.field { margin-bottom: 0; }
+
+/* =========================================================
+   FORMULARIOS
+   ========================================================= */
+label { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: .25rem; }
+input, select {
+  width: 100%; padding: .5rem .65rem;
+  border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; font: inherit; color: var(--ink);
+  min-height: 40px; /* área táctil cómoda en móvil */
+}
+input:focus, select:focus { outline: 2px solid var(--gold-soft); border-color: var(--gold); }
+
+/* Fila de formulario inline: apila en móvil, alinea en escritorio */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .6rem;
+}
+@media (min-width: 720px) {
+  .form-row { grid-template-columns: minmax(140px, 180px) minmax(200px, 1fr) auto; align-items: end; }
+  .form-row.cuatro { grid-template-columns: minmax(130px, 160px) minmax(130px, 160px) minmax(180px, 1fr) auto; }
+}
+
+/* =========================================================
+   BOTONES: ancho completo en móvil, contenido en escritorio
+   ========================================================= */
+button.app {
+  font: inherit; cursor: pointer; border-radius: 8px;
+  border: 1px solid transparent;
+  padding: .55rem 1.1rem;
+  min-height: 42px;
+  width: 100%;
+}
+@media (min-width: 720px) {
+  button.app { width: auto; }
+}
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover { filter: brightness(1.15); }
+.btn-secondary { background: transparent; color: var(--ink); border-color: var(--line) !important; }
+.btn-secondary:hover { background: var(--paper-deep); }
+.btn-link { background: none; border: none; color: var(--gold); padding: 0; font-size: 13px; cursor: pointer; }
+button.app:disabled { opacity: .5; cursor: not-allowed; }
+
+.row { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.spacer { flex: 1; }
+a { color: var(--gold); }
+
+/* Barra de acciones (contadores + exportar): apila en móvil */
+.actions-bar { display: flex; flex-direction: column; gap: .75rem; }
+@media (min-width: 820px) {
+  .actions-bar { flex-direction: row; align-items: center; }
+  .actions-bar .spacer { display: block; }
+}
+
+/* =========================================================
+   TABLAS RESPONSIVE
+   Escritorio/tablet: tabla clásica.
+   Móvil (<680px): cada fila se vuelve una tarjeta apilada
+   usando data-label, sin scroll horizontal.
+   ========================================================= */
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .04em;
+  color: var(--ink-soft); padding: .5rem .6rem;
+  border-bottom: 1px solid var(--line); background: var(--paper-deep);
+}
+td { padding: .55rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr.excluido td { opacity: .45; }
+td.num, th.num { text-align: right; font-family: "IBM Plex Mono", monospace; font-size: 13px; }
+
+@media (max-width: 679px) {
+  table.responsive thead { display: none; }
+  table.responsive tr {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: .75rem;
+    padding: .5rem .75rem;
+    background: #fff;
+  }
+  table.responsive td {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border: none;
+    padding: .3rem 0;
+    text-align: right;
+  }
+  table.responsive td.num { text-align: right; }
+  table.responsive td::before {
+    content: attr(data-label);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--ink-soft);
+    text-align: left;
+    flex-shrink: 0;
+  }
+  table.responsive td:empty { display: none; }
+  table.responsive td[data-label=""]::before { display: none; }
+  /* celda del checkbox: sin etiqueta, alineada a la izquierda */
+  table.responsive td.check { justify-content: flex-start; }
+}
+
+/* =========================================================
+   LOGIN
+   ========================================================= */
+.login-wrap {
+  min-height: calc(100vh - 52px);
+  min-height: calc(100dvh - 52px);
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(1rem, 4vw, 1.5rem);
+}
+.login-card {
+  width: 100%; max-width: 420px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: clamp(1.5rem, 5vw, 2rem);
+}
+.login-card .field { margin-bottom: .75rem; }
+.sello {
+  width: clamp(56px, 14vw, 64px); height: clamp(56px, 14vw, 64px);
+  margin: 0 auto 1rem;
+  border: 2px solid var(--gold); box-shadow: inset 0 0 0 3px var(--gold-soft);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  color: var(--gold); font-family: "Fraunces", serif;
+  font-size: clamp(1.2rem, 3.5vw, 1.4rem);
+  transform: rotate(-4deg);
+}
+
+/* ---- mensajes ---- */
+.alert { padding: .75rem 1rem; border-radius: 8px; margin-bottom: var(--space); font-size: 14px; white-space: pre-line; }
+.alert-ok { background: var(--green-soft); color: var(--green); }
+
+/* Encabezado de tarjeta de empresa: apila botones en móvil */
+.empresa-head { display: flex; flex-direction: column; gap: .6rem; }
+.empresa-head .botones { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+@media (min-width: 720px) {
+  .empresa-head { flex-direction: row; align-items: center; justify-content: space-between; }
+  .empresa-head .botones { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<nav class="preview-nav">
+  <span>Vista previa</span>
+  <button data-s="login" class="active">1 · Login</button>
+  <button data-s="empresas">2 · Cartera</button>
+  <button data-s="config">3 · Configuración</button>
+  <button data-s="revision">4 · Revisión</button>
+</nav>
+
+<!-- ============ PANTALLA 1: LOGIN ============ -->
+<section class="screen visible" id="s-login">
+  <div class="login-wrap">
+    <div class="login-card">
+      <div class="sello">AC</div>
+      <h1 style="text-align:center;font-size:clamp(1.2rem,4vw,1.4rem)">Auxiliar Contable</h1>
+      <p class="muted small" style="text-align:center;margin-top:0">
+        Del reporte DIAN a los modelos de importación de SIIGO
+      </p>
+      <div class="field">
+        <label>Correo electrónico</label>
+        <input type="email" value="maria.gomez@contadores.co">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" value="••••••••••">
+      </div>
+      <button class="app btn-primary" style="width:100%">Entrar</button>
+      <p class="small" style="text-align:center">
+        ¿Primera vez? <button class="btn-link">Crea tu cuenta de contador</button>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PANTALLA 2: CARTERA DE EMPRESAS ============ -->
+<section class="screen" id="s-empresas">
+  <header class="topbar">
+    <h1>Auxiliar Contable</h1>
+    <div class="row">
+      <span class="muted small">María Gómez — Contadora</span>
+      <button class="app btn-secondary" style="width:auto">Salir</button>
+    </div>
+  </header>
+  <main class="container">
+    <div class="card">
+      <h2 style="font-size:1.1rem">Nueva empresa</h2>
+      <div class="form-row">
+        <div><label>NIT (sin DV)</label><input placeholder="900123456"></div>
+        <div><label>Razón social</label><input placeholder="Mi Empresa S.A.S."></div>
+        <button class="app btn-primary">Agregar a mi cartera</button>
+      </div>
+    </div>
+
+    <h2 style="font-size:1.15rem">Mi cartera (3)</h2>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="empresa-head">
+          <div>
+            <strong>Textiles del Cesar S.A.S.</strong>
+            <div class="muted small mono">NIT 901.234.567</div>
+          </div>
+          <div class="botones">
+            <button class="app btn-secondary">Configuración</button>
+            <button class="app btn-primary">Importar reporte</button>
+          </div>
+        </div>
+        <table class="responsive" style="margin-top:.9rem">
+          <thead><tr><th>Archivo</th><th class="num">Docs</th><th>Fecha</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td data-label="Archivo">ReporteDian_Junio2026.xlsx</td>
+              <td class="num" data-label="Docs">148</td>
+              <td class="small muted" data-label="Fecha">02/07/2026 9:14 a. m.</td>
+              <td data-label=""><a href="#">Revisar →</a></td>
+            </tr>
+            <tr>
+              <td data-label="Archivo">ReporteDian_Mayo2026.xlsx</td>
+              <td class="num" data-label="Docs">131</td>
+              <td class="small muted" data-label="Fecha">03/06/2026 4:47 p. m.</td>
+              <td data-label=""><a href="#">Revisar →</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="empresa-head">
+          <div>
+            <strong>Comercializadora Nikorua Ltda.</strong>
+            <div class="muted small mono">NIT 830.112.998</div>
+          </div>
+          <div class="botones">
+            <button class="app btn-secondary">Configuración</button>
+            <button class="app btn-primary">Importar reporte</button>
+          </div>
+        </div>
+        <table class="responsive" style="margin-top:.9rem">
+          <thead><tr><th>Archivo</th><th class="num">Docs</th><th>Fecha</th><th></th></tr></thead>
+          <tbody>
+            <tr>
+              <td data-label="Archivo">Reporte_documentos.xlsx</td>
+              <td class="num" data-label="Docs">57</td>
+              <td class="small muted" data-label="Fecha">28/06/2026 11:02 a. m.</td>
+              <td data-label=""><a href="#">Revisar →</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="empresa-head">
+          <div>
+            <strong>Arquitesis Educación S.A.S.</strong>
+            <div class="muted small mono">NIT 915.667.204</div>
+          </div>
+          <div class="botones">
+            <button class="app btn-secondary">Configuración</button>
+            <button class="app btn-primary">Importar reporte</button>
+          </div>
+        </div>
+        <p class="muted small" style="margin-bottom:0;margin-top:.9rem">
+          Sin importaciones todavía. Sube el reporte .xlsx de documentos electrónicos de la DIAN.
+        </p>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ============ PANTALLA 3: CONFIGURACIÓN ============ -->
+<section class="screen" id="s-config">
+  <header class="topbar">
+    <h1>← Textiles del Cesar S.A.S. <span class="muted mono small">NIT 901.234.567</span></h1>
+  </header>
+  <main class="container">
+    <div class="alert alert-ok">Configuración guardada ✔</div>
+
+    <div class="config-grid">
+      <div class="card">
+        <h2 style="font-size:1.1rem">Compras — comprobantes contables</h2>
+        <div class="grid2">
+          <div class="field"><label>Tipo de comprobante</label><input value="CC"></div>
+          <div class="field"><label>Próximo consecutivo</label><input value="1042"></div>
+          <div class="field"><label>Sucursal (opcional)</label><input value=""></div>
+          <div class="field"><label>Cuenta de gasto por defecto</label><input value="519595"></div>
+          <div class="field"><label>Cuenta IVA descontable</label><input value="240820"></div>
+          <div class="field"><label>Cuenta INC</label><input value="511570"></div>
+          <div class="field"><label>Cuenta por pagar</label><input value="233595"></div>
+          <div class="field"><label>Cuenta ReteFuente</label><input value="236540"></div>
+          <div class="field"><label>Cuenta ReteICA</label><input value="236801"></div>
+          <div class="field"><label>Cuenta ReteIVA</label><input value="236701"></div>
+          <div class="field"><label>Código impuesto IVA (SIIGO)</label><input value="IVA19"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:1.1rem">Ventas — facturas de venta</h2>
+        <div class="grid2">
+          <div class="field"><label>Tipo de comprobante</label><input value="FV"></div>
+          <div class="field"><label>Próximo consecutivo</label><input value="311"></div>
+          <div class="field"><label>Sucursal (opcional)</label><input value=""></div>
+          <div class="field"><label>Código producto genérico</label><input value="SERV001"></div>
+          <div class="field"><label>Código forma de pago</label><input value="FP01"></div>
+          <div class="field"><label>Identificación vendedor</label><input value=""></div>
+          <div class="field"><label>Código impuesto IVA (SIIGO)</label><input value="IVA19"></div>
+        </div>
+        <div style="margin-top:1rem;border-top:1px solid var(--line);padding-top:1rem" class="row">
+          <div class="field" style="flex:0 0 200px">
+            <label>Formato de fecha</label>
+            <select><option selected>DD/MM/YYYY</option><option>MM/DD/YYYY</option><option>YYYY-MM-DD</option></select>
+          </div>
+          <div class="spacer"></div>
+          <button class="app btn-primary">Guardar configuración</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:var(--space)">
+      <h2 style="font-size:1.1rem">Reglas de cuenta por proveedor (NIT)</h2>
+      <p class="muted small">
+        Cuando un documento recibido venga de uno de estos NIT, el gasto se contabiliza
+        en la cuenta indicada en lugar de la cuenta de gasto por defecto.
+      </p>
+      <div class="form-row cuatro" style="margin-bottom:.9rem">
+        <div><label>NIT proveedor</label><input placeholder="900123456"></div>
+        <div><label>Cuenta contable</label><input placeholder="511010"></div>
+        <div><label>Nota (opcional)</label><input placeholder="Arriendos"></div>
+        <button class="app btn-secondary">Agregar regla</button>
+      </div>
+      <table class="responsive">
+        <thead><tr><th>NIT</th><th>Cuenta</th><th>Nota</th><th></th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="mono" data-label="NIT">900123456</td>
+            <td class="mono" data-label="Cuenta">511010</td>
+            <td data-label="Nota">Arriendo bodega principal</td>
+            <td data-label=""><button class="btn-link">Eliminar</button></td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="NIT">830009104</td>
+            <td class="mono" data-label="Cuenta">513505</td>
+            <td data-label="Nota">Servicios públicos — energía</td>
+            <td data-label=""><button class="btn-link">Eliminar</button></td>
+          </tr>
+          <tr>
+            <td class="mono" data-label="NIT">901555222</td>
+            <td class="mono" data-label="Cuenta">523560</td>
+            <td data-label="Nota">Publicidad digital</td>
+            <td data-label=""><button class="btn-link">Eliminar</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</section>
+
+<!-- ============ PANTALLA 4: REVISIÓN DE IMPORTACIÓN ============ -->
+<section class="screen" id="s-revision">
+  <header class="topbar">
+    <h1>← Revisión de importación</h1>
+    <span class="muted small">ReporteDian_Junio2026.xlsx</span>
+  </header>
+  <main class="container">
+    <div class="alert alert-ok">✔ Exportación de comprobantes descargada. Los archivos vienen en un .zip (máx. 500 registros por archivo) junto con un RESUMEN.txt.</div>
+
+    <div class="card actions-bar">
+      <span>
+        <strong>5</strong> → comprobantes ·
+        <strong>2</strong> → facturas de venta ·
+        <strong>3</strong> excluidos
+      </span>
+      <div class="spacer"></div>
+      <button class="app btn-primary">Exportar comprobantes</button>
+      <button class="app btn-primary">Exportar facturas de venta</button>
+    </div>
+
+    <div class="card">
+      <table class="responsive">
+        <thead>
+          <tr>
+            <th></th><th>Tipo</th><th>Doc</th><th>Fecha</th><th>Tercero</th>
+            <th class="num">Total</th><th class="num">IVA</th><th>Destino</th><th>Motivo</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Factura electrónica</td>
+            <td class="mono small" data-label="Doc">SETP4471</td>
+            <td class="small" data-label="Fecha">15/06/2026</td>
+            <td class="small" data-label="Tercero">Distribuidora El Roble SAS (900123456)</td>
+            <td class="num" data-label="Total">1.190.000</td>
+            <td class="num" data-label="IVA">190.000</td>
+            <td data-label="Destino"><span class="badge badge-comprobante">Comprobante</span></td>
+            <td class="small muted" data-label="Motivo"></td>
+          </tr>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Factura electrónica</td>
+            <td class="mono small" data-label="Doc">FE8821</td>
+            <td class="small" data-label="Fecha">16/06/2026</td>
+            <td class="small" data-label="Tercero">Energía del Caribe ESP (830009104)</td>
+            <td class="num" data-label="Total">452.300</td>
+            <td class="num" data-label="IVA">0</td>
+            <td data-label="Destino"><span class="badge badge-comprobante">Comprobante</span></td>
+            <td class="small muted" data-label="Motivo"></td>
+          </tr>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Nota crédito</td>
+            <td class="mono small" data-label="Doc">NC12</td>
+            <td class="small" data-label="Fecha">17/06/2026</td>
+            <td class="small" data-label="Tercero">Distribuidora El Roble SAS (900123456)</td>
+            <td class="num" data-label="Total">119.000</td>
+            <td class="num" data-label="IVA">19.000</td>
+            <td data-label="Destino"><span class="badge badge-comprobante">Comprobante</span></td>
+            <td class="small muted" data-label="Motivo">Nota crédito recibida: se invierte débitos y créditos</td>
+          </tr>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Documento soporte</td>
+            <td class="mono small" data-label="Doc">DS204</td>
+            <td class="small" data-label="Fecha">18/06/2026</td>
+            <td class="small" data-label="Tercero">Pedro Martínez — transporte (79544210)</td>
+            <td class="num" data-label="Total">380.000</td>
+            <td class="num" data-label="IVA">0</td>
+            <td data-label="Destino"><span class="badge badge-comprobante">Comprobante</span></td>
+            <td class="small muted" data-label="Motivo">Doc. soporte a no obligado: es compra, va como comprobante</td>
+          </tr>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Factura electrónica</td>
+            <td class="mono small" data-label="Doc">SETP4502</td>
+            <td class="small" data-label="Fecha">21/06/2026</td>
+            <td class="small" data-label="Tercero">Papelería Central Ltda (901555222)</td>
+            <td class="num" data-label="Total">238.000</td>
+            <td class="num" data-label="IVA">38.000</td>
+            <td data-label="Destino"><span class="badge badge-comprobante">Comprobante</span></td>
+            <td class="small muted" data-label="Motivo"></td>
+          </tr>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Factura electrónica</td>
+            <td class="mono small" data-label="Doc">FV288</td>
+            <td class="small" data-label="Fecha">20/06/2026</td>
+            <td class="small" data-label="Tercero">Almacenes La Economía SAS (800555111)</td>
+            <td class="num" data-label="Total">2.975.000</td>
+            <td class="num" data-label="IVA">475.000</td>
+            <td data-label="Destino"><span class="badge badge-factura">Factura venta</span></td>
+            <td class="small muted" data-label="Motivo"></td>
+          </tr>
+          <tr>
+            <td class="check" data-label=""><input type="checkbox" checked style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Factura electrónica</td>
+            <td class="mono small" data-label="Doc">FV289</td>
+            <td class="small" data-label="Fecha">24/06/2026</td>
+            <td class="small" data-label="Tercero">Constructora Andina SAS (860777333)</td>
+            <td class="num" data-label="Total">1.547.000</td>
+            <td class="num" data-label="IVA">247.000</td>
+            <td data-label="Destino"><span class="badge badge-factura">Factura venta</span></td>
+            <td class="small muted" data-label="Motivo"></td>
+          </tr>
+          <tr class="excluido">
+            <td class="check" data-label=""><input type="checkbox" style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Nómina electrónica</td>
+            <td class="mono small" data-label="Doc">NE31</td>
+            <td class="small" data-label="Fecha">30/06/2026</td>
+            <td class="small" data-label="Tercero">Textiles del Cesar S.A.S. (901234567)</td>
+            <td class="num" data-label="Total">8.450.000</td>
+            <td class="num" data-label="IVA">0</td>
+            <td data-label="Destino"><span class="badge badge-excluir">Excluido</span></td>
+            <td class="small muted" data-label="Motivo">Nómina: se importa por el módulo de nómina de SIIGO</td>
+          </tr>
+          <tr class="excluido">
+            <td class="check" data-label=""><input type="checkbox" style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Factura electrónica</td>
+            <td class="mono small" data-label="Doc">X99</td>
+            <td class="small" data-label="Fecha">18/06/2026</td>
+            <td class="small" data-label="Tercero">Suministros Rápidos SAS (999888777)</td>
+            <td class="num" data-label="Total">100.000</td>
+            <td class="num" data-label="IVA">0</td>
+            <td data-label="Destino"><span class="badge badge-excluir">Excluido</span></td>
+            <td class="small muted" data-label="Motivo">Documento rechazado por la DIAN</td>
+          </tr>
+          <tr class="excluido">
+            <td class="check" data-label=""><input type="checkbox" style="width:auto;min-height:auto"></td>
+            <td data-label="Tipo">Nota crédito</td>
+            <td class="mono small" data-label="Doc">NC7</td>
+            <td class="small" data-label="Fecha">25/06/2026</td>
+            <td class="small" data-label="Tercero">Almacenes La Economía SAS (800555111)</td>
+            <td class="num" data-label="Total">297.500</td>
+            <td class="num" data-label="IVA">47.500</td>
+            <td data-label="Destino"><span class="badge badge-excluir">Excluido</span></td>
+            <td class="small muted" data-label="Motivo">Las notas emitidas no van en el modelo de facturas de venta</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="muted small">
+      Empresa: <a href="#">ver configuración contable</a> — las cuentas, códigos de impuesto
+      y consecutivos usados en la exportación salen de allí.
+    </p>
+  </main>
+</section>
+
+<style>
+.badge {
+  display: inline-block; padding: .15rem .6rem; border-radius: 999px;
+  font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.badge-comprobante { background: var(--green-soft); color: var(--green); }
+.badge-factura { background: var(--gold-soft); color: var(--gold); }
+.badge-excluir { background: var(--red-soft); color: var(--red); }
+</style>
+
+<script>
+const botones = document.querySelectorAll(".preview-nav button");
+const pantallas = {
+  login: document.getElementById("s-login"),
+  empresas: document.getElementById("s-empresas"),
+  config: document.getElementById("s-config"),
+  revision: document.getElementById("s-revision"),
+};
+botones.forEach((b) => {
+  b.onclick = () => {
+    botones.forEach((x) => x.classList.remove("active"));
+    b.classList.add("active");
+    Object.values(pantallas).forEach((s) => s.classList.remove("visible"));
+    pantallas[b.dataset.s].classList.add("visible");
+    window.scrollTo(0, 0);
+  };
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "auxiliar-contable",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Auxiliar Contable DIAN → SIIGO: plataforma multi-empresa para contadores",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @auxiliar/motor-dian-siigo && npm run build -w @auxiliar/api && npm run build -w @auxiliar/web",
+    "dev:api": "npm run dev -w @auxiliar/api",
+    "dev:web": "npm run dev -w @auxiliar/web",
+    "prisma:migrate": "prisma migrate deploy",
+    "prisma:generate": "prisma generate",
+    "db:seed": "node apps/api/dist/seed.js"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

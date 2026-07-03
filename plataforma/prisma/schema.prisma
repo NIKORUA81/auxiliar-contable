@@ -1,0 +1,142 @@
+// Auxiliar Contable — esquema de base de datos (PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  CONTADOR
+  EMPRESA
+}
+
+enum EstadoJob {
+  PROCESANDO
+  LISTO
+  ERROR
+}
+
+model Usuario {
+  id            String           @id @default(uuid())
+  email         String           @unique
+  passwordHash  String
+  nombre        String
+  rol           Rol
+  contador      Contador?
+  empresaAcceso EmpresaUsuario[]
+  creadoEn      DateTime         @default(now())
+
+  @@map("usuarios")
+}
+
+model Contador {
+  id        String    @id @default(uuid())
+  usuarioId String    @unique
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  empresas  Empresa[]
+
+  @@map("contadores")
+}
+
+model Empresa {
+  id           String               @id @default(uuid())
+  nit          String
+  nombre       String
+  contadorId   String
+  contador     Contador             @relation(fields: [contadorId], references: [id], onDelete: Cascade)
+  usuarios     EmpresaUsuario[]
+  config       ConfigContable?
+  reglasCuenta ReglaCuenta[]
+  importJobs   ImportJob[]
+  creadoEn     DateTime             @default(now())
+
+  @@unique([contadorId, nit])
+  @@map("empresas")
+}
+
+model EmpresaUsuario {
+  id        String  @id @default(uuid())
+  usuarioId String
+  empresaId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, empresaId])
+  @@map("empresa_usuarios")
+}
+
+model ConfigContable {
+  id                       String  @id @default(uuid())
+  empresaId                String  @unique
+  empresa                  Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  // ---- Compras (comprobantes contables) ----
+  ccTipoComprobante        String  @default("CC")
+  ccConsecutivo            Int     @default(1000)
+  ccSucursal               String  @default("")
+  ccCuentaGasto            String  @default("519595")
+  ccCuentaIVADescontable   String  @default("240820")
+  ccCuentaINC              String  @default("511570")
+  ccCuentaPorPagar         String  @default("233595")
+  ccCuentaReteFuente       String  @default("236540")
+  ccCuentaReteICA          String  @default("236801")
+  ccCuentaReteIVA          String  @default("236701")
+  ccCodigoIVA              String  @default("IVA19")
+  // ---- Ventas (facturas de venta) ----
+  fvTipoComprobante        String  @default("FV")
+  fvConsecutivo            Int     @default(1)
+  fvSucursal               String  @default("")
+  fvCodigoProducto         String  @default("")
+  fvCodigoFormaPago        String  @default("")
+  fvIdentificacionVendedor String  @default("")
+  fvCodigoIVA              String  @default("IVA19")
+  // ---- General ----
+  formatoFecha             String  @default("DD/MM/YYYY")
+
+  @@map("configs_contables")
+}
+
+model ReglaCuenta {
+  id        String  @id @default(uuid())
+  empresaId String
+  empresa   Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  nit       String
+  cuenta    String
+  nota      String  @default("")
+
+  @@unique([empresaId, nit])
+  @@map("reglas_cuenta")
+}
+
+model ImportJob {
+  id            String               @id @default(uuid())
+  empresaId     String
+  empresa       Empresa              @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  archivoOrigen String
+  estado        EstadoJob            @default(PROCESANDO)
+  totalDocs     Int                  @default(0)
+  creadoEn      DateTime             @default(now())
+  documentos    DocumentoImportado[]
+
+  @@index([empresaId, creadoEn])
+  @@map("import_jobs")
+}
+
+model DocumentoImportado {
+  id        String    @id @default(uuid())
+  jobId     String
+  job       ImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  cufe      String
+  tipoDoc   String
+  destino   String // comprobante | factura | excluir
+  motivo    String    @default("")
+  incluir   Boolean   @default(true)
+  datosJson Json
+
+  @@index([jobId])
+  @@map("documentos_importados")
+}

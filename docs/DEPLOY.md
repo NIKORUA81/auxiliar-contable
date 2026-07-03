@@ -97,39 +97,16 @@ Abre `https://auxiliar.wolfiax.com` — debe verse la pantalla de configuración
 
 ---
 
-## Parte D · Base de datos PostgreSQL (preparada para el backend futuro)
+## Parte D · Base de datos PostgreSQL — SUPERADA, ver `plataforma/`
 
-**Importante**: la app publicada arriba **no usa base de datos todavía** — sigue guardando
-la configuración en el navegador (`localStorage`). Esta parte deja Postgres listo para
-cuando construyamos el backend (cuentas de usuario, varias pymes por contador, historial
-de importaciones), que es la siguiente iteración del roadmap (`docs/analisis.md` §6).
-
-1. En pgAdmin, conéctate a tu servidor Postgres del VPS.
-2. Crea una base de datos dedicada:
-   ```sql
-   CREATE DATABASE auxiliar_contable;
-   ```
-3. Crea un usuario de aplicación (no uses el superusuario `postgres` para el backend):
-   ```sql
-   CREATE USER auxiliar_app WITH PASSWORD 'CAMBIA_ESTA_CLAVE';
-   GRANT ALL PRIVILEGES ON DATABASE auxiliar_contable TO auxiliar_app;
-   ```
-4. Ejecuta el esquema inicial preparado en [`sql/schema.sql`](../sql/schema.sql) (ábrelo en
-   el Query Tool de pgAdmin conectado a `auxiliar_contable`, o desde consola):
-   ```bash
-   psql -h localhost -U auxiliar_app -d auxiliar_contable -f sql/schema.sql
-   ```
-5. **Seguridad**: si Postgres escucha en la IP pública del VPS, restringe el acceso:
-   - `postgresql.conf` → `listen_addresses = 'localhost'` (si el backend correrá en el
-     mismo VPS) o solo la IP interna necesaria.
-   - `pg_hba.conf` → limita por IP/usuario, no dejes `0.0.0.0/0` con `trust`.
-   - pgAdmin normalmente se conecta por túnel SSH o VPN, no exponiendo el puerto 5432
-     directamente a internet.
-   - Nunca subas la contraseña real al repositorio (usa variables de entorno `.env`,
-     que ya está en `.gitignore`).
-
-Cuando quieras que construya el backend (API + autenticación + conexión a estas tablas),
-dímelo explícitamente — es un cambio de arquitectura, no solo un despliegue.
+**Esta parte quedó reemplazada.** El backend ya existe en [`plataforma/`](../plataforma) con
+su propia guía completa de despliegue (Docker Compose: `db` + `api` + `web`) en
+[`plataforma/README.md`](../plataforma/README.md), incluida la conexión de PgAdmin por túnel
+SSH. Esta Parte D (crear DB/usuario a mano y correr `sql/schema.sql`) solo aplica si prefieres
+usar un PostgreSQL del VPS ya existente **en lugar** del contenedor `db` del compose — en ese
+caso sigue siendo válida como bootstrap manual, pero el esquema autoritativo ahora es
+[`plataforma/prisma/schema.prisma`](../plataforma/prisma/schema.prisma), gestionado con
+migraciones de Prisma (no con `sql/schema.sql`, que quedó como referencia histórica).
 
 ---
 
