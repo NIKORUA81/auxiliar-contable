@@ -1,0 +1,4 @@
+# Los .bat deben conservar finales de línea de Windows (CRLF) o no se ejecutan
+*.bat text eol=crlf
+# Los scripts de shell deben conservar LF
+*.sh text eol=lf
