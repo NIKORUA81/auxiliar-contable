@@ -25,20 +25,25 @@ Por cada CUFE de la lista, el programa:
    No se resuelven captchas de forma automática.
 3. Hace clic en **«Descargar PDF»** y guarda el archivo en `descargas/`.
 
-## Instalación (local)
+## Inicio rápido (recomendado)
 
-Requiere Python 3.10+.
+Requiere **Python 3.10+** instalado (en Windows, marca *«Add python.exe to PATH»* al instalar
+desde <https://www.python.org/downloads/>).
+
+- **Windows**: doble clic en **`iniciar_windows.bat`**.
+- **macOS / Linux**: `./iniciar_mac_linux.sh` (la primera vez, `chmod +x iniciar_mac_linux.sh`).
+
+El lanzador crea el entorno, instala todo la primera vez, abre `http://127.0.0.1:5000` en tu
+navegador y deja el servidor corriendo. Para cerrar, cierra la ventana negra (Windows) o
+`Ctrl+C` (mac/Linux).
+
+## Instalación manual (alternativa)
 
 ```bash
 cd descargador-dian
-python -m venv .venv && source .venv/bin/activate   # opcional pero recomendado
+python -m venv .venv && source .venv/bin/activate   # en Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 playwright install chromium                          # descarga el navegador, una sola vez
-```
-
-## Uso
-
-```bash
 python app.py
 # abre http://127.0.0.1:5000 en tu navegador
 ```
