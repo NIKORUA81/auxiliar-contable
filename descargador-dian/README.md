@@ -20,8 +20,12 @@ https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=<CUFE>
 Por cada CUFE de la lista, el programa:
 
 1. Abre esa URL en un navegador real (Playwright).
-2. Espera a que **Cloudflare** deje pasar y cargue la vista del documento.
-3. Hace clic en **«Descargar PDF»** y guarda el archivo en `descargas/`.
+2. Espera a que **Cloudflare** deje pasar.
+3. Si la página muestra un botón **«Buscar»**, lo pulsa automáticamente para desplegar el
+   documento.
+4. Hace clic en **«Descargar PDF»** y guarda el archivo en `descargas/`.
+5. Al terminar el lote, **reintenta solo** los CUFEs que hayan fallado (para entonces
+   Cloudflare ya está resuelto, así que normalmente salen en el reintento).
 
 ### Cómo se pasa Cloudflare (importante)
 

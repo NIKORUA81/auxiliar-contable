@@ -29,6 +29,16 @@ import openpyxl
 # URL base del catálogo de la DIAN (vía QR, acceso directo por llave)
 DIAN_QR_URL = "https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey={cufe}"
 
+# Botón "Buscar" del formulario de la DIAN: hay que pulsarlo (con el CUFE ya
+# puesto por la URL) para que se muestre el documento y aparezca "Descargar PDF".
+SEARCH_SELECTORS = [
+    "button:has-text('Buscar')",
+    "input[type=submit][value*='Buscar' i]",
+    "input[type=button][value*='Buscar' i]",
+    "button:has-text('Consultar')",
+    "a:has-text('Buscar')",
+]
+
 # Texto del enlace/botón de descarga en la vista del documento
 DOWNLOAD_SELECTORS = [
     "a:has-text('Descargar PDF')",
@@ -177,6 +187,57 @@ PRIMER_TIMEOUT_MS = 180000
 CDP_URL_DEFAULT = "http://127.0.0.1:9222"
 
 
+def _esperar_alguno(page, selectores: list[str], timeout_ms: int):
+    """Espera hasta que aparezca (visible) alguno de los selectores. Devuelve
+    (selector, elemento) o (None, None) si se agota el tiempo. Sondeo por
+    polling para tolerar la pantalla de Cloudflare mientras carga."""
+    import time
+
+    fin = time.time() + timeout_ms / 1000
+    while time.time() < fin:
+        for sel in selectores:
+            try:
+                el = page.query_selector(sel)
+                if el and el.is_visible():
+                    return sel, el
+            except Exception:  # noqa: BLE001 — elemento aún no estable
+                pass
+        page.wait_for_timeout(500)
+    return None, None
+
+
+def _descargar_uno(page, reg, item, espera: int, timeout_ms: int, base_url: str, destino: Path) -> bool:
+    """Procesa un CUFE: abre la página, pulsa 'Buscar' si aparece, y descarga el
+    PDF. Devuelve True si quedó descargado."""
+    page.goto(base_url.format(cufe=reg.cufe), wait_until="domcontentloaded")
+
+    # Espera a que pase Cloudflare y aparezca "Buscar" o directamente "Descargar".
+    sel, el = _esperar_alguno(page, SEARCH_SELECTORS + DOWNLOAD_SELECTORS, espera)
+
+    if sel in SEARCH_SELECTORS:
+        # Pulsar "Buscar" y esperar a que se muestre el documento con "Descargar".
+        el.click()
+        sel, el = _esperar_alguno(page, DOWNLOAD_SELECTORS, timeout_ms)
+
+    if not el:
+        item.estado = "no_encontrado"
+        item.mensaje = (
+            "No apareció el botón 'Descargar PDF' (documento inexistente, "
+            "Cloudflare sin resolver o cambió la página de la DIAN)."
+        )
+        return False
+
+    with page.expect_download(timeout=timeout_ms) as dl_info:
+        el.click()
+    download = dl_info.value
+    ruta = destino / reg.nombre_pdf()
+    download.save_as(str(ruta))
+    item.estado = "ok"
+    item.mensaje = ""
+    item.archivo = ruta.name
+    return True
+
+
 def _procesar_lote(
     page,
     registros: list[RegistroCUFE],
@@ -184,8 +245,10 @@ def _procesar_lote(
     destino: Path,
     base_url: str,
     timeout_ms: int,
+    reintentos: int = 1,
 ) -> None:
-    """Recorre los CUFEs en una página ya lista y descarga cada PDF."""
+    """Recorre los CUFEs, pulsando 'Buscar' y descargando cada PDF. Al final
+    reintenta automáticamente los que fallaron (Cloudflare ya está resuelto)."""
     from playwright.sync_api import TimeoutError as PWTimeout
 
     primero = True
@@ -195,40 +258,36 @@ def _procesar_lote(
             item.mensaje = "Resuelve el reto de Cloudflare en la ventana del navegador si aparece…"
         espera = PRIMER_TIMEOUT_MS if primero else timeout_ms
         try:
-            page.goto(base_url.format(cufe=reg.cufe), wait_until="domcontentloaded")
-
-            enlace = None
-            for sel in DOWNLOAD_SELECTORS:
-                try:
-                    enlace = page.wait_for_selector(sel, timeout=espera, state="visible")
-                    if enlace:
-                        break
-                except PWTimeout:
-                    continue
-
-            if not enlace:
-                item.estado = "no_encontrado"
-                item.mensaje = (
-                    "No apareció el botón 'Descargar PDF' (documento inexistente, "
-                    "Cloudflare sin resolver o cambió la página de la DIAN)."
-                )
-                continue
-
-            with page.expect_download(timeout=timeout_ms) as dl_info:
-                enlace.click()
-            download = dl_info.value
-            ruta = destino / reg.nombre_pdf()
-            download.save_as(str(ruta))
-            item.estado = "ok"
-            item.mensaje = ""
-            item.archivo = ruta.name
-            primero = False
+            if _descargar_uno(page, reg, item, espera, timeout_ms, base_url, destino):
+                primero = False
         except PWTimeout:
             item.estado = "error"
             item.mensaje = "Tiempo de espera agotado."
         except Exception as e:  # noqa: BLE001 — reportar sin tumbar el lote
             item.estado = "error"
             item.mensaje = str(e)[:300]
+
+    # Reintentos automáticos de los fallidos (ya pasado Cloudflare).
+    for _ in range(max(0, reintentos)):
+        pendientes = [
+            (item, reg)
+            for item, reg in zip(progreso.items, registros)
+            if item.estado in ("error", "no_encontrado")
+        ]
+        if not pendientes:
+            break
+        for item, reg in pendientes:
+            item.estado = "descargando"
+            item.mensaje = "Reintentando…"
+            try:
+                if not _descargar_uno(page, reg, item, timeout_ms, timeout_ms, base_url, destino):
+                    pass
+            except PWTimeout:
+                item.estado = "error"
+                item.mensaje = "Tiempo de espera agotado (reintento)."
+            except Exception as e:  # noqa: BLE001
+                item.estado = "error"
+                item.mensaje = str(e)[:300]
 
 
 def descargar_documentos(
