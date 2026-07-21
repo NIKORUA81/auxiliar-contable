@@ -15,13 +15,14 @@ del usuario, lo cual es importante porque el reporte DIAN contiene información 
 auxiliar-contable/
 ├── index.html, js/, css/       Prototipo estático original (100% en el navegador)
 ├── dist/AuxiliarContable.html   Versión de archivo único, sin internet
-└── plataforma/                  ★ Aplicación completa (multi-empresa, con base de datos)
-    ├── apps/api/                Backend Express + TypeScript + Prisma (PostgreSQL)
-    ├── apps/web/                Frontend React + Vite (tema claro/oscuro, responsive)
-    ├── packages/motor-dian-siigo/  Motor compartido de parseo y contabilización
-    ├── prisma/                  Esquema de base de datos
-    ├── docker-compose.yml       db + api + web para el VPS
-    └── preview/                 Vista previa estática de las 4 pantallas (sin backend)
+├── plataforma/                  ★ Aplicación completa (multi-empresa, con base de datos)
+│   ├── apps/api/                Backend Express + TypeScript + Prisma (PostgreSQL)
+│   ├── apps/web/                Frontend React + Vite (tema claro/oscuro, responsive)
+│   ├── packages/motor-dian-siigo/  Motor compartido de parseo y contabilización
+│   ├── prisma/                  Esquema de base de datos
+│   ├── docker-compose.yml       db + api + web para el VPS
+│   └── preview/                 Vista previa estática de las 4 pantallas (sin backend)
+└── descargador-dian/            Módulo local: descarga PDF de la DIAN por CUFE (Python + Flask)
 ```
 
 - **Prototipo estático** (raíz): sigue funcionando igual, ideal para uso individual sin cuenta.
@@ -30,6 +31,10 @@ auxiliar-contable/
   Guía de despliegue en [`plataforma/README.md`](plataforma/README.md).
 - **Vista previa** (`plataforma/preview/`): abre `index.html` para ver la forma de las
   4 pantallas con datos simulados, sin instalar nada.
+- **Descargador DIAN** (`descargador-dian/`): a partir de una lista de llaves CUFE/CUDE en
+  Excel, descarga en lote los PDF de los documentos electrónicos desde el portal de la DIAN.
+  Interfaz web local (Flask) + navegador automatizado (Playwright).
+  Instrucciones en [`descargador-dian/README.md`](descargador-dian/README.md).
 
 El motor de negocio (`packages/motor-dian-siigo`) es un puerto a TypeScript del mismo
 `js/app.js` del prototipo estático: mismos encabezados, misma partida doble, mismo

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Descargador DIAN — documentos por CUFE</title>
+<style>
+  :root { --azul:#16396b; --azul2:#2b5ca8; --fondo:#f5f7fb; --borde:#dfe5ef;
+          --ok:#1a7f4b; --warn:#b45309; --error:#b91c1c; }
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif; background:var(--fondo);
+         color:#1e2532; margin:0; line-height:1.45; }
+  header { background:var(--azul); color:#fff; padding:20px 24px; }
+  header h1 { margin:0 0 4px; font-size:1.4rem; }
+  header p { margin:0; opacity:.85; max-width:75ch; font-size:.9rem; }
+  main { max-width:1000px; margin:0 auto; padding:20px 16px 40px; }
+  .card { background:#fff; border:1px solid var(--borde); border-radius:10px; padding:18px 20px; margin-bottom:16px; }
+  h2 { margin:0 0 10px; font-size:1.05rem; color:var(--azul); }
+  .hint { font-size:.85rem; color:#5b6472; margin:0 0 12px; }
+  label { display:block; font-size:.8rem; color:#46505e; margin-bottom:10px; }
+  input[type=text], input[type=file] { width:100%; padding:8px; margin-top:3px;
+         border:1px solid var(--borde); border-radius:6px; font-size:.9rem; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:1; min-width:220px; }
+  button { padding:10px 18px; background:var(--azul); color:#fff; border:0; border-radius:8px;
+           font-size:.92rem; cursor:pointer; }
+  button:hover { background:var(--azul2); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .status { font-size:.85rem; margin-top:10px; white-space:pre-line; }
+  .contadores { font-weight:600; font-size:.9rem; margin:6px 0 12px; }
+  table { border-collapse:collapse; width:100%; font-size:.82rem; }
+  th,td { border-bottom:1px solid var(--borde); padding:6px 8px; text-align:left; }
+  th { background:#eef2f9; color:var(--azul); }
+  .badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:.72rem; font-weight:600; }
+  .b-pendiente { background:#eceff4; color:#5b6472; }
+  .b-descargando { background:#e3ebfa; color:var(--azul2); }
+  .b-ok { background:#e1f0e8; color:var(--ok); }
+  .b-error, .b-no_encontrado { background:#fdeaea; color:var(--error); }
+  .msg { color:var(--warn); font-size:.76rem; }
+  code { background:#eef2f9; padding:1px 5px; border-radius:4px; font-size:.85em; }
+  .oculto { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Descargador DIAN</h1>
+  <p>Descarga en lote los PDF de documentos electrónicos de la DIAN a partir de una lista de
+     llaves CUFE/CUDE. Usa un navegador real; si Cloudflare pide un clic, resuélvelo en la
+     ventana que se abre y la descarga continúa automáticamente.</p>
+</header>
+
+<main>
+  <div class="card">
+    <h2>1 · Lista de CUFEs</h2>
+    <p class="hint">Sube un <code>.xlsx</code> con las llaves. Se autodetecta la columna
+       <code>CUFE/CUDE</code>; si el archivo trae además <code>Tipo de documento</code>,
+       <code>Prefijo</code> y <code>Folio</code> (como el reporte de la DIAN), se usan para
+       nombrar cada PDF. Puedes usar el mismo reporte de documentos electrónicos.</p>
+    <div class="row">
+      <label>Archivo .xlsx
+        <input id="archivo" type="file" accept=".xlsx,.xls">
+      </label>
+      <label>Subcarpeta de destino (opcional)
+        <input id="carpeta" type="text" placeholder="ej: empresa-x_junio-2026">
+      </label>
+      <div style="flex:0 0 auto">
+        <button id="btn-iniciar">Iniciar descarga</button>
+      </div>
+    </div>
+    <div id="status" class="status"></div>
+  </div>
+
+  <div id="panel" class="card oculto">
+    <h2>2 · Progreso</h2>
+    <div id="contadores" class="contadores"></div>
+    <div style="overflow-x:auto">
+      <table>
+        <thead><tr><th>#</th><th>CUFE</th><th>Estado</th><th>Archivo</th><th>Detalle</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let poll = null;
+
+function corto(cufe) { return cufe.length > 24 ? cufe.slice(0, 24) + "…" : cufe; }
+
+async function iniciar() {
+  const file = $("archivo").files[0];
+  if (!file) { $("status").textContent = "Selecciona el archivo .xlsx."; return; }
+  const fd = new FormData();
+  fd.append("archivo", file);
+  fd.append("carpeta", $("carpeta").value.trim());
+
+  $("btn-iniciar").disabled = true;
+  $("status").textContent = "Leyendo archivo e iniciando el navegador…";
+
+  try {
+    const res = await fetch("/iniciar", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      $("status").textContent = "⚠ " + (data.error || "Error al iniciar.");
+      $("btn-iniciar").disabled = false;
+      return;
+    }
+    $("status").textContent = `Procesando ${data.total} documento(s)…`;
+    $("panel").classList.remove("oculto");
+    if (poll) clearInterval(poll);
+    poll = setInterval(actualizar, 1500);
+    actualizar();
+  } catch (e) {
+    $("status").textContent = "⚠ No se pudo contactar el servidor local.";
+    $("btn-iniciar").disabled = false;
+  }
+}
+
+async function actualizar() {
+  const res = await fetch("/estado");
+  const data = await res.json();
+  const tbody = $("tbody");
+  tbody.innerHTML = "";
+  data.items.forEach((it, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td title="${it.cufe}"><code>${corto(it.cufe)}</code></td>
+      <td><span class="badge b-${it.estado}">${it.estado}</span></td>
+      <td>${it.archivo ? `<a href="/descargas/${encodeURIComponent(it.archivo)}">${it.archivo}</a>` : ""}</td>
+      <td class="msg">${it.mensaje || ""}</td>`;
+    tbody.appendChild(tr);
+  });
+  $("contadores").textContent =
+    `${data.ok} descargados · ${data.error} con error · ${data.total} total`;
+  if (data.terminado) {
+    clearInterval(poll); poll = null;
+    $("btn-iniciar").disabled = false;
+    $("status").textContent = data.error_global
+      ? "⚠ " + data.error_global
+      : "✔ Proceso terminado. Los PDF están en la carpeta 'descargas/'.";
+  }
+}
+
+$("btn-iniciar").onclick = iniciar;
+</script>
+</body>
+</html>

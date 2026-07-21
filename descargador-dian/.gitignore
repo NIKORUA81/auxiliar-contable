@@ -1,0 +1,8 @@
+# PDFs descargados y archivos subidos (datos, no código)
+descargas/
+_subidas/
+
+# Entorno Python
+.venv/
+__pycache__/
+*.pyc
