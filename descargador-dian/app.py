@@ -44,6 +44,9 @@ EXECUTABLE_PATH = os.environ.get("PLAYWRIGHT_CHROMIUM") or None
 CHANNEL = os.environ.get("PLAYWRIGHT_CHANNEL", "chrome") or None
 # URL para acceder a cada documento por su llave (configurable por si la DIAN cambia).
 DIAN_URL = os.environ.get("DIAN_URL") or DIAN_QR_URL
+# Conectar al Chrome que el usuario abre con depuración remota (mejor contra
+# Cloudflare). Por defecto 127.0.0.1:9222; ponlo vacío para usar el perfil propio.
+CDP_URL = os.environ.get("PLAYWRIGHT_CDP", "http://127.0.0.1:9222") or None
 
 app = Flask(__name__)
 
@@ -99,6 +102,7 @@ def iniciar():
             executable_path=EXECUTABLE_PATH,
             channel=CHANNEL,
             base_url=DIAN_URL,
+            cdp_url=CDP_URL,
         )
 
     with _lock:

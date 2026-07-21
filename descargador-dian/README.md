@@ -25,34 +25,38 @@ Por cada CUFE de la lista, el programa:
 
 ### Cómo se pasa Cloudflare (importante)
 
-Cloudflare bloquea los navegadores "automatizados de fábrica". Para evitarlo, el módulo:
+Cloudflare bloquea los navegadores "automatizados de fábrica". Por eso el modo recomendado es
+**conectarse a un Chrome que tú abres** (`abrir_chrome_dian.bat`), donde tú resuelves el reto:
 
-- Usa **tu Chrome real instalado** (no el Chromium genérico de Playwright) mediante
-  `channel="chrome"`.
-- Guarda un **perfil persistente** en `.perfil_chrome/`: la **primera vez** resuelves el
-  reto de Cloudflare a mano en la ventana que se abre (unos segundos), y la cookie de
-  aprobación (`cf_clearance`) queda guardada. Los CUFEs siguientes —y las próximas veces que
-  abras la app— pasan **sin volver a pedir el reto**.
-- Oculta las señales de automatización (`navigator.webdriver`, etc.) que Cloudflare detecta.
+- Ese `.bat` lanza Chrome con **depuración remota** (`--remote-debugging-port=9222`) y un
+  **perfil dedicado** (`.chrome-dian/`, separado de tu Chrome normal).
+- Resuelves Cloudflare ahí una vez; la cookie de aprobación (`cf_clearance`) queda en ese
+  perfil, así que en próximas corridas normalmente ya no lo pide.
+- La app se conecta por CDP (`connect_over_cdp`) y abre las pestañas de descarga **en ese
+  mismo navegador**, heredando tu sesión aprobada. No cierra tu navegador.
 
-Por eso, en el primer documento la app espera hasta 3 minutos para darte tiempo de resolver
-Cloudflare si aparece. Si tu Chrome ya tiene sesión de la DIAN, normalmente pasa solo.
+Configuración por entorno (`PLAYWRIGHT_CDP`): por defecto `http://127.0.0.1:9222`. Si lo
+dejas **vacío**, la app usa un modo de respaldo (perfil propio persistente en `.perfil_chrome/`
+con `channel="chrome"` y ocultando señales de automatización), menos efectivo contra
+Cloudflare pero sin depender del paso 1.
 
-> Si aun así Cloudflare no deja pasar al navegador automatizado, existe un plan B: conectar
-> el módulo a tu Chrome ya abierto (que ya pasó Cloudflare) por depuración remota. Pídelo y
-> se agrega.
+## Inicio rápido (Windows) — flujo de 2 pasos
 
-## Inicio rápido (recomendado)
+Requiere **Python 3.10+** (marca *«Add python.exe to PATH»* al instalar) y **Google Chrome**.
 
-Requiere **Python 3.10+** instalado (en Windows, marca *«Add python.exe to PATH»* al instalar
-desde <https://www.python.org/downloads/>).
+1. **Doble clic en `abrir_chrome_dian.bat`** — abre un Chrome dedicado en el portal de la DIAN.
+   Resuelve ahí el reto de **Cloudflare** una vez y **deja esa ventana abierta**.
+2. **Doble clic en `iniciar_windows.bat`** — arranca la app y abre `http://127.0.0.1:5000`.
+   La app se conecta a ese Chrome (que ya pasó Cloudflare) y descarga los documentos **en
+   pestañas de ese mismo navegador**.
 
-- **Windows**: doble clic en **`iniciar_windows.bat`**.
-- **macOS / Linux**: `./iniciar_mac_linux.sh` (la primera vez, `chmod +x iniciar_mac_linux.sh`).
+¿Por qué dos pasos? Cloudflare bloquea los navegadores automatizados "de fábrica". Al usar el
+Chrome que **tú** abriste y donde **tú** pasaste el reto, el programa hereda esa sesión
+aprobada — es la forma más confiable. Ver «Cómo se pasa Cloudflare» más abajo.
 
-El lanzador crea el entorno, instala todo la primera vez, abre `http://127.0.0.1:5000` en tu
-navegador y deja el servidor corriendo. Para cerrar, cierra la ventana negra (Windows) o
-`Ctrl+C` (mac/Linux).
+En **macOS / Linux**: `./iniciar_mac_linux.sh`. Para el Chrome con depuración, ábrelo con
+`google-chrome --remote-debugging-port=9222 --user-data-dir=./.chrome-dian` (o el binario de
+tu sistema) antes de iniciar la app.
 
 ## Instalación manual (alternativa)
 
