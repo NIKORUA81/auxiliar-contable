@@ -2,6 +2,9 @@
 descargas/
 _subidas/
 
+# Perfil persistente del navegador (cookies de Cloudflare, etc.)
+.perfil_chrome/
+
 # Entorno Python
 .venv/
 __pycache__/

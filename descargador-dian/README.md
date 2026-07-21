@@ -20,10 +20,27 @@ https://catalogo-vpfe.dian.gov.co/document/searchqr?documentkey=<CUFE>
 Por cada CUFE de la lista, el programa:
 
 1. Abre esa URL en un navegador real (Playwright).
-2. Espera a que **Cloudflare** deje pasar y cargue la vista del documento. El navegador se
-   abre **visible**; si Cloudflare pide un clic, lo resuelves tú y el proceso continúa solo.
-   No se resuelven captchas de forma automática.
+2. Espera a que **Cloudflare** deje pasar y cargue la vista del documento.
 3. Hace clic en **«Descargar PDF»** y guarda el archivo en `descargas/`.
+
+### Cómo se pasa Cloudflare (importante)
+
+Cloudflare bloquea los navegadores "automatizados de fábrica". Para evitarlo, el módulo:
+
+- Usa **tu Chrome real instalado** (no el Chromium genérico de Playwright) mediante
+  `channel="chrome"`.
+- Guarda un **perfil persistente** en `.perfil_chrome/`: la **primera vez** resuelves el
+  reto de Cloudflare a mano en la ventana que se abre (unos segundos), y la cookie de
+  aprobación (`cf_clearance`) queda guardada. Los CUFEs siguientes —y las próximas veces que
+  abras la app— pasan **sin volver a pedir el reto**.
+- Oculta las señales de automatización (`navigator.webdriver`, etc.) que Cloudflare detecta.
+
+Por eso, en el primer documento la app espera hasta 3 minutos para darte tiempo de resolver
+Cloudflare si aparece. Si tu Chrome ya tiene sesión de la DIAN, normalmente pasa solo.
+
+> Si aun así Cloudflare no deja pasar al navegador automatizado, existe un plan B: conectar
+> el módulo a tu Chrome ya abierto (que ya pasó Cloudflare) por depuración remota. Pídelo y
+> se agrega.
 
 ## Inicio rápido (recomendado)
 

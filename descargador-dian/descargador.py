@@ -161,6 +161,19 @@ class ProgresoJob:
         }
 
 
+# Script que se inyecta antes de cargar cada página para ocultar señales de
+# automatización que Cloudflare usa para detectar bots.
+STEALTH_JS = """
+Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+window.chrome = window.chrome || { runtime: {} };
+Object.defineProperty(navigator, 'languages', {get: () => ['es-CO', 'es']});
+Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
+"""
+
+# Primer CUFE: se da más tiempo para que el usuario resuelva Cloudflare a mano.
+PRIMER_TIMEOUT_MS = 180000
+
+
 def descargar_documentos(
     registros: list[RegistroCUFE],
     carpeta_destino: str | Path,
@@ -169,10 +182,18 @@ def descargar_documentos(
     timeout_ms: int = 60000,
     base_url: str = DIAN_QR_URL,
     executable_path: str | None = None,
+    perfil_dir: str | Path | None = None,
+    channel: str | None = "chrome",
 ) -> None:
     """
     Procesa la lista de CUFEs de forma secuencial con un solo navegador.
     Actualiza `progreso` en el sitio para que la interfaz muestre el avance.
+
+    Para pasar Cloudflare usa un **perfil persistente** con tu **Chrome real**
+    (channel="chrome"): la primera vez resuelves el reto a mano en la ventana que
+    se abre y la cookie de aprobación (cf_clearance) queda guardada en el perfil,
+    de modo que los siguientes CUFEs pasan sin intervención. Se ocultan además
+    las señales de automatización que Cloudflare detecta.
 
     Se importa Playwright aquí adentro para que la app arranque aunque los
     navegadores aún no estén instalados (`playwright install chromium`).
@@ -182,19 +203,41 @@ def descargar_documentos(
 
     destino = Path(carpeta_destino)
     destino.mkdir(parents=True, exist_ok=True)
+    perfil = Path(perfil_dir) if perfil_dir else (Path(__file__).resolve().parent / ".perfil_chrome")
+    perfil.mkdir(parents=True, exist_ok=True)
+
+    launch_kwargs: dict = {
+        "user_data_dir": str(perfil),
+        "headless": headless,
+        "accept_downloads": True,
+        "no_viewport": True,
+        "args": [
+            "--disable-blink-features=AutomationControlled",
+            "--start-maximized",
+        ],
+    }
+    if executable_path:
+        launch_kwargs["executable_path"] = executable_path
 
     progreso.activo = True
     try:
         with sync_playwright() as p:
-            launch_kwargs: dict = {"headless": headless}
-            if executable_path:
-                launch_kwargs["executable_path"] = executable_path
-            browser = p.chromium.launch(**launch_kwargs)
-            context = browser.new_context(accept_downloads=True)
-            page = context.new_page()
+            # Preferimos el Chrome instalado del usuario; si no está, caemos al
+            # Chromium de Playwright (menos efectivo contra Cloudflare, pero funciona).
+            try:
+                context = p.chromium.launch_persistent_context(channel=channel, **launch_kwargs)
+            except Exception:
+                context = p.chromium.launch_persistent_context(**launch_kwargs)
 
+            context.add_init_script(STEALTH_JS)
+            page = context.pages[0] if context.pages else context.new_page()
+
+            primero = True
             for item, reg in zip(progreso.items, registros):
                 item.estado = "descargando"
+                if primero:
+                    item.mensaje = "Resuelve el reto de Cloudflare en la ventana del navegador si aparece…"
+                espera = PRIMER_TIMEOUT_MS if primero else timeout_ms
                 try:
                     page.goto(base_url.format(cufe=reg.cufe), wait_until="domcontentloaded")
 
@@ -202,7 +245,7 @@ def descargar_documentos(
                     enlace = None
                     for sel in DOWNLOAD_SELECTORS:
                         try:
-                            enlace = page.wait_for_selector(sel, timeout=timeout_ms, state="visible")
+                            enlace = page.wait_for_selector(sel, timeout=espera, state="visible")
                             if enlace:
                                 break
                         except PWTimeout:
@@ -222,7 +265,9 @@ def descargar_documentos(
                     ruta = destino / reg.nombre_pdf()
                     download.save_as(str(ruta))
                     item.estado = "ok"
+                    item.mensaje = ""
                     item.archivo = ruta.name
+                    primero = False
                 except PWTimeout:
                     item.estado = "error"
                     item.mensaje = "Tiempo de espera agotado."
@@ -231,7 +276,6 @@ def descargar_documentos(
                     item.mensaje = str(e)[:300]
 
             context.close()
-            browser.close()
     except Exception as e:  # noqa: BLE001
         progreso.error_global = str(e)[:300]
     finally:

@@ -20,7 +20,13 @@ from pathlib import Path
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from descargador import ProgresoJob, ResultadoItem, descargar_documentos, leer_cufes
+from descargador import (
+    DIAN_QR_URL,
+    ProgresoJob,
+    ResultadoItem,
+    descargar_documentos,
+    leer_cufes,
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 CARPETA_DESCARGAS = BASE_DIR / "descargas"
@@ -33,6 +39,11 @@ CARPETA_SUBIDAS.mkdir(exist_ok=True)
 HEADLESS = os.environ.get("HEADLESS", "0") == "1"
 # Permite apuntar a un Chromium ya instalado (p. ej. en este entorno de pruebas).
 EXECUTABLE_PATH = os.environ.get("PLAYWRIGHT_CHROMIUM") or None
+# Canal del navegador: "chrome" (tu Chrome real, mejor contra Cloudflare),
+# "msedge", o "" para usar el Chromium que trae Playwright.
+CHANNEL = os.environ.get("PLAYWRIGHT_CHANNEL", "chrome") or None
+# URL para acceder a cada documento por su llave (configurable por si la DIAN cambia).
+DIAN_URL = os.environ.get("DIAN_URL") or DIAN_QR_URL
 
 app = Flask(__name__)
 
@@ -86,6 +97,8 @@ def iniciar():
             job,
             headless=HEADLESS,
             executable_path=EXECUTABLE_PATH,
+            channel=CHANNEL,
+            base_url=DIAN_URL,
         )
 
     with _lock:
