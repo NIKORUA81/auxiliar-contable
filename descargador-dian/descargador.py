@@ -183,6 +183,10 @@ Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
 # Primer CUFE: se da más tiempo para que el usuario resuelva Cloudflare a mano.
 PRIMER_TIMEOUT_MS = 180000
 
+# Espera fija tras cargar la página para que el reto de Cloudflare se resuelva
+# antes de interactuar (en milisegundos).
+ESPERA_CLOUDFLARE_MS = 2500
+
 # Puerto por defecto de depuración remota del Chrome que abre el usuario.
 CDP_URL_DEFAULT = "http://127.0.0.1:9222"
 
@@ -206,31 +210,89 @@ def _esperar_alguno(page, selectores: list[str], timeout_ms: int):
     return None, None
 
 
-def _descargar_uno(page, reg, item, espera: int, timeout_ms: int, base_url: str, destino: Path) -> bool:
-    """Procesa un CUFE: abre la página, pulsa 'Buscar' si aparece, y descarga el
-    PDF. Devuelve True si quedó descargado."""
-    page.goto(base_url.format(cufe=reg.cufe), wait_until="domcontentloaded")
+# fetch dentro del navegador: usa las cookies de la sesión (incl. Cloudflare) y
+# no depende de que el clic dispare una descarga ni de proxies del sistema.
+_FETCH_JS = """
+async (url) => {
+  try {
+    const r = await fetch(url, { credentials: 'include' });
+    if (!r.ok) return null;
+    const buf = new Uint8Array(await r.arrayBuffer());
+    let bin = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < buf.length; i += CHUNK) {
+      bin += String.fromCharCode.apply(null, buf.subarray(i, i + CHUNK));
+    }
+    return btoa(bin);
+  } catch (e) { return null; }
+}
+"""
 
-    # Espera a que pase Cloudflare y aparezca "Buscar" o directamente "Descargar".
+
+def _guardar_pdf_por_enlace(page, el, ruta: Path) -> bool:
+    """Descarga el PDF por el href del enlace, con un fetch ejecutado DENTRO del
+    navegador (hereda la sesión y las cookies de Cloudflare). Es lo más robusto:
+    no depende de que el clic dispare una descarga (la DIAN a veces abre el PDF
+    en el visor). Devuelve True si guardó un PDF válido."""
+    import base64
+    from urllib.parse import urljoin
+
+    try:
+        href = el.get_attribute("href")
+    except Exception:  # noqa: BLE001
+        href = None
+    if not href or href.strip().lower().startswith("javascript"):
+        return False
+
+    url = urljoin(page.url, href)
+    b64 = page.evaluate(_FETCH_JS, url)
+    if not b64:
+        return False
+    cuerpo = base64.b64decode(b64)
+    if not cuerpo[:5].startswith(b"%PDF"):
+        return False
+    ruta.write_bytes(cuerpo)
+    return True
+
+
+def _descargar_uno(page, reg, item, espera: int, timeout_ms: int, base_url: str, destino: Path) -> bool:
+    """Procesa un CUFE de forma 100% automática: abre la página, espera a que
+    pase Cloudflare, pulsa 'Buscar' si aparece y baja el PDF. Sin clics manuales.
+    Devuelve True si quedó descargado."""
+    page.goto(base_url.format(cufe=reg.cufe), wait_until="domcontentloaded")
+    # Espera fija para que el reto de Cloudflare se resuelva antes de interactuar.
+    page.wait_for_timeout(ESPERA_CLOUDFLARE_MS)
+
+    # Espera a que aparezca "Buscar" o directamente "Descargar".
     sel, el = _esperar_alguno(page, SEARCH_SELECTORS + DOWNLOAD_SELECTORS, espera)
 
     if sel in SEARCH_SELECTORS:
-        # Pulsar "Buscar" y esperar a que se muestre el documento con "Descargar".
+        # Pulsar "Buscar" automáticamente y esperar la vista del documento.
         el.click()
+        page.wait_for_timeout(ESPERA_CLOUDFLARE_MS)
         sel, el = _esperar_alguno(page, DOWNLOAD_SELECTORS, timeout_ms)
 
     if not el:
         item.estado = "no_encontrado"
         item.mensaje = (
-            "No apareció el botón 'Descargar PDF' (documento inexistente, "
-            "Cloudflare sin resolver o cambió la página de la DIAN)."
+            "No apareció 'Descargar PDF' (documento inexistente, Cloudflare sin "
+            "resolver o cambió la página de la DIAN)."
         )
         return False
 
+    ruta = destino / reg.nombre_pdf()
+
+    # Vía principal: bajar el PDF por su enlace (robusto, sin depender del clic).
+    if _guardar_pdf_por_enlace(page, el, ruta):
+        item.estado = "ok"
+        item.mensaje = ""
+        item.archivo = ruta.name
+        return True
+
+    # Respaldo: clic y capturar el evento de descarga del navegador.
     with page.expect_download(timeout=timeout_ms) as dl_info:
         el.click()
     download = dl_info.value
-    ruta = destino / reg.nombre_pdf()
     download.save_as(str(ruta))
     item.estado = "ok"
     item.mensaje = ""
